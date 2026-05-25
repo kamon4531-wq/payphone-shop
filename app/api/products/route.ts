@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabaseAdmin().from("products").insert({
     name: body.name, category: body.category,
     price: body.price, old_price: body.old_price,
+    description: body.description || null,
     image_url: body.image_url, drive_file_id: body.drive_file_id
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -29,6 +30,7 @@ export async function PUT(req: NextRequest) {
   const { data, error } = await supabaseAdmin().from("products").update({
     name: body.name, category: body.category,
     price: body.price, old_price: body.old_price,
+    description: body.description || null,
     image_url: body.image_url, drive_file_id: body.drive_file_id
   }).eq("id", body.id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
