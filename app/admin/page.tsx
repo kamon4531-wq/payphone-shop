@@ -105,7 +105,7 @@ function ProductsTab() {
 
   return (
     <div>
-      <button onClick={() => setEditing({ category: "case", price: 0, old_price: null })}
+      <button onClick={() => setEditing({ category: "case", price: 0, old_price: null, description: "" })}
         className="mb-4 bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold">
         + เพิ่มสินค้า
       </button>
@@ -131,6 +131,13 @@ function ProductsTab() {
               onChange={e => setEditing({ ...editing, old_price: e.target.value ? Number(e.target.value) : null })}
               className="border p-2 rounded"/>
           </div>
+          <textarea
+            placeholder="รายละเอียดสินค้า เช่น ความจุ, คุณสมบัติ, ขนาด, การรับประกัน (ขึ้นบรรทัดใหม่ได้)"
+            value={editing.description || ""}
+            onChange={e => setEditing({ ...editing, description: e.target.value })}
+            rows={5}
+            className="w-full border p-2 rounded resize-y"
+          />
           <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)}/>
           {editing.image_url && !file && (
             // eslint-disable-next-line @next/next/no-img-element
