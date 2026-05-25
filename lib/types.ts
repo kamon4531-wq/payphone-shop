@@ -21,10 +21,14 @@ export type Order = {
 
 export const CATEGORIES = [
   { id: "all", name: "ทั้งหมด" },
-  { id: "case", name: "เคสโทรศัพท์/อุปกรณ์เสริม" },
-  { id: "charger", name: "หัวชาร์จเร็ว" },
-  { id: "film", name: "ฟิล์มกระจกนิรภัย" },
-  { id: "powerbank", name: "พาวเวอร์แบงค์" },
+  { id: "battery", name: "แบตเตอรี่/พาวเวอร์แบงค์" },
   { id: "cable", name: "สายชาร์จ" },
-  { id: "audio", name: "หูฟัง/เสียง" }
+  { id: "case", name: "เคสโทรศัพท์" },
+  { id: "charger", name: "หัวชาร์จ" },
+  { id: "earphone", name: "หูฟัง" },
+  { id: "film", name: "ฟิล์มกระจก" },
+  { id: "gadget", name: "อุปกรณ์เสริม" },
+  { id: "speaker", name: "ลำโพง" },
+  { id: "holder", name: "ที่จับ/ขาตั้ง" },
+  { id: "personal", name: "เครื่องประดับ" }
 ];
