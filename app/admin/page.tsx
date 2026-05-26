@@ -127,4 +127,150 @@ function ProductsTab() {
             value={editing.description || ""}
             onChange={e => setEditing({ ...editing, description: e.target.value })}
             rows={5} className="w-full border p-2 rounded resize-y"/>
-          <input type="file" accept="image/*" onChange={e => setFile(e.target.
+          <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)}/>
+          {editing.image_url && !file && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={editing.image_url} className="w-24 h-24 object-contain border rounded" alt=""/>
+          )}
+          <div className="flex gap-2">
+            <button disabled={busy} className="bg-emerald-500 text-white px-4 py-2 rounded disabled:opacity-50">
+              {busy ? "กำลังบันทึก..." : "บันทึก"}</button>
+            <button type="button" onClick={() => { setEditing(null); setFile(null); }}
+              className="bg-gray-200 px-4 py-2 rounded">ยกเลิก</button>
+          </div>
+        </form>
+      )}
+
+      <div className="grid gap-2">
+        {products.map(p => (
+          <div key={p.id} className="bg-white p-3 rounded-xl shadow flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p.image_url} className="w-16 h-16 object-contain bg-gray-50 rounded" alt=""/>
+            <div className="flex-1">
+              <div className="font-medium">{p.name}</div>
+              <div className="text-xs text-gray-500">{CATEGORIES.find(c => c.id === p.category)?.name}</div>
+              <div className="text-emerald-600 font-bold">฿{p.price.toLocaleString()}</div>
+            </div>
+            <button onClick={() => setEditing(p)} className="text-sm text-blue-500">แก้ไข</button>
+            <button onClick={() => del(p.id)} className="text-sm text-red-500">ลบ</button>
+          </div>
+        ))}
+        {products.length === 0 && <div className="text-center text-gray-500 py-8">ยังไม่มีสินค้า</div>}
+      </div>
+    </div>
+  );
+}
+
+function OrdersTab() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [viewSlip, setViewSlip] = useState<string | null>(null);
+
+  async function load() {
+    const r = await fetch("/api/orders/list");
+    const d = await r.json();
+    setOrders(d.orders || []);
+  }
+  useEffect(() => { load(); }, []);
+
+  function copyAddr(text: string) {
+    navigator.clipboard.writeText(text);
+    alert("คัดลอกแล้ว");
+  }
+
+  async function delSlip(id: string) {
+    if (!confirm("ลบสลิปออเดอร์นี้? (ออเดอร์ยังอยู่)")) return;
+    const r = await fetch(`/api/orders?id=${id}&action=clear-slip`, { method: "DELETE" });
+    if (r.ok) load(); else alert("ลบไม่สำเร็จ");
+  }
+
+  async function delOrder(id: string) {
+    if (!confirm("ลบออเดอร์นี้ทั้งหมด?")) return;
+    const r = await fetch(`/api/orders?id=${id}`, { method: "DELETE" });
+    if (r.ok) load(); else alert("ลบไม่สำเร็จ");
+  }
+
+  function exportCSV() {
+    const headers = ["วันที่สั่ง","เลขออเดอร์","ชื่อ","เบอร์","จังหวัด","ที่อยู่","สินค้า","ราคา","เวลาโอน","เลขสลิป"];
+    const rows = orders.map(o => [
+      new Date(o.created_at).toLocaleString("th-TH"),
+      o.id,
+      o.customer_name,
+      o.phone,
+      o.province || "",
+      (o.address || "").replace(/\n/g, " "),
+      o.product_name,
+      o.price,
+      o.transfer_time || "",
+      o.slip_id || ""
+    ]);
+    const csv = [headers, ...rows].map(r =>
+      r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")
+    ).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  }
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-3">
+        <span className="text-sm text-gray-500">ทั้งหมด {orders.length} ออเดอร์</span>
+        <button onClick={exportCSV}
+          className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold">
+          📥 Export CSV
+        </button>
+      </div>
+
+      <div className="grid gap-2">
+        {orders.map(o => (
+          <div key={o.id} className="bg-white p-3 rounded-xl shadow">
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>#{o.id.slice(0, 8)}</span>
+              <span>{new Date(o.created_at).toLocaleString("th-TH")}</span>
+            </div>
+            <div className="font-medium mt-1">{o.product_name}</div>
+            <div className="text-sm">
+              ลูกค้า: <b>{o.customer_name}</b> · โทร: <a className="text-blue-500" href={`tel:${o.phone}`}>{o.phone}</a>
+              {o.province && <> · <span className="text-purple-600">{o.province}</span></>}
+            </div>
+            {o.address && (
+              <div className="mt-2 bg-gray-50 p-2 rounded flex justify-between items-start gap-2">
+                <div className="text-xs text-gray-700 whitespace-pre-wrap flex-1">📦 {o.address}</div>
+                <button onClick={() => copyAddr(o.address!)} className="text-xs text-blue-500 shrink-0">คัดลอก</button>
+              </div>
+            )}
+            {o.transfer_time && (
+              <div className="text-xs text-gray-600 mt-1">⏰ โอนเวลา: {new Date(o.transfer_time).toLocaleString("th-TH")}</div>
+            )}
+            <div className="flex items-center justify-between mt-2">
+              <div className="text-emerald-600 font-bold">฿{o.price.toLocaleString()}</div>
+              <div className="flex gap-2 items-center">
+                {o.slip_url ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={o.slip_url} alt="slip" onClick={() => setViewSlip(o.slip_url)}
+                      className="w-12 h-12 object-cover rounded border cursor-pointer"/>
+                    <button onClick={() => delSlip(o.id)} className="text-xs text-orange-500">ลบสลิป</button>
+                  </>
+                ) : <span className="text-xs text-gray-400">ไม่มีสลิป</span>}
+                <button onClick={() => delOrder(o.id)} className="text-xs text-red-500">ลบ</button>
+              </div>
+            </div>
+          </div>
+        ))}
+        {orders.length === 0 && <div className="text-center text-gray-500 py-8">ยังไม่มีออเดอร์</div>}
+      </div>
+
+      {viewSlip && (
+        <div onClick={() => setViewSlip(null)}
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-pointer">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={viewSlip} alt="slip" className="max-w-full max-h-full object-contain"/>
+        </div>
+      )}
+    </div>
+  );
+}
