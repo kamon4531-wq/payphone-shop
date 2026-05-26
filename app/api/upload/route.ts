@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdmin } from "@/lib/auth";
 import crypto from "crypto";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  if (!isAdmin(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-
   const form = await req.formData();
   const file = form.get("file") as File | null;
   if (!file) return NextResponse.json({ error: "no file" }, { status: 400 });
+
+  if (file.size > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "file too large (max 10MB)" }, { status: 400 });
+  }
 
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME!;
   const apiKey = process.env.CLOUDINARY_API_KEY!;
