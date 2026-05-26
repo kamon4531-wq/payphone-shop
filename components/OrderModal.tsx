@@ -7,6 +7,7 @@ export default function OrderModal({
 }: { product: Product | null; onClose: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -24,7 +25,8 @@ export default function OrderModal({
         product_name: product!.name,
         price: product!.price,
         customer_name: name,
-        phone
+        phone,
+        address
       })
     });
     setLoading(false);
@@ -62,18 +64,27 @@ export default function OrderModal({
               </div>
             </div>
             <div>
-              <label className="text-sm text-gray-700">ชื่อ-นามสกุล</label>
+              <label className="text-sm text-gray-700">ชื่อ-นามสกุล <span className="text-red-500">*</span></label>
               <input
                 required value={name} onChange={e => setName(e.target.value)}
                 className="w-full border rounded-lg p-2 mt-1" placeholder="กรอกชื่อ"
               />
             </div>
             <div>
-              <label className="text-sm text-gray-700">เบอร์โทรศัพท์</label>
+              <label className="text-sm text-gray-700">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
               <input
                 required value={phone} onChange={e => setPhone(e.target.value)}
                 pattern="[0-9]{9,10}" inputMode="numeric"
                 className="w-full border rounded-lg p-2 mt-1" placeholder="0XXXXXXXXX"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-gray-700">ที่อยู่จัดส่ง <span className="text-red-500">*</span></label>
+              <textarea
+                required value={address} onChange={e => setAddress(e.target.value)}
+                rows={4}
+                className="w-full border rounded-lg p-2 mt-1 resize-y"
+                placeholder="บ้านเลขที่ ซอย ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์"
               />
             </div>
             <div className="flex gap-2">
