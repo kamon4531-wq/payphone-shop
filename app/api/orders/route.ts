@@ -12,7 +12,11 @@ export async function POST(req: NextRequest) {
     customer_name: body.customer_name,
     phone: body.phone,
     address: body.address || null,
-    price: body.price
+    province: body.province || null,
+    price: body.price,
+    slip_url: body.slip_url || null,
+    slip_id: body.slip_id || null,
+    transfer_time: body.transfer_time || null
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ order: data });
