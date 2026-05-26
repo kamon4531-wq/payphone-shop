@@ -6,9 +6,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState("");
 
-  useEffect(() => {
-    fetch("/api/admin/me").then(r => setAuthed(r.ok));
-  }, []);
+  useEffect(() => { fetch("/api/admin/me").then(r => setAuthed(r.ok)); }, []);
 
   async function login(e: React.FormEvent) {
     e.preventDefault(); setErr("");
@@ -32,7 +30,6 @@ export default function AdminPage() {
       </form>
     </div>
   );
-
   return <Dashboard />;
 }
 
@@ -44,16 +41,13 @@ function Dashboard() {
         <h1 className="text-xl font-bold">Admin Dashboard</h1>
         <div className="flex gap-2">
           <a href="/" className="text-sm text-gray-600 hover:underline">← หน้าร้าน</a>
-          <button
-            onClick={async () => { await fetch("/api/admin/logout", { method: "POST" }); location.reload(); }}
-            className="text-sm text-red-500"
-          >ออกจากระบบ</button>
+          <button onClick={async () => { await fetch("/api/admin/logout", { method: "POST" }); location.reload(); }}
+            className="text-sm text-red-500">ออกจากระบบ</button>
         </div>
       </header>
       <div className="flex gap-2 mb-4 border-b">
         {["products", "orders"].map(t => (
-          <button key={t}
-            onClick={() => setTab(t as any)}
+          <button key={t} onClick={() => setTab(t as any)}
             className={`px-4 py-2 ${tab === t ? "border-b-2 border-emerald-500 font-semibold" : "text-gray-500"}`}
           >{t === "products" ? "สินค้า" : "ออเดอร์"}</button>
         ))}
@@ -106,9 +100,7 @@ function ProductsTab() {
   return (
     <div>
       <button onClick={() => setEditing({ category: "case", price: 0, old_price: null, description: "" })}
-        className="mb-4 bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold">
-        + เพิ่มสินค้า
-      </button>
+        className="mb-4 bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold">+ เพิ่มสินค้า</button>
 
       {editing && (
         <form onSubmit={save} className="bg-white p-4 rounded-xl shadow mb-4 space-y-3">
@@ -131,82 +123,8 @@ function ProductsTab() {
               onChange={e => setEditing({ ...editing, old_price: e.target.value ? Number(e.target.value) : null })}
               className="border p-2 rounded"/>
           </div>
-          <textarea
-            placeholder="รายละเอียดสินค้า เช่น ความจุ, คุณสมบัติ, ขนาด, การรับประกัน (ขึ้นบรรทัดใหม่ได้)"
+          <textarea placeholder="รายละเอียดสินค้า เช่น ความจุ, คุณสมบัติ, ขนาด, การรับประกัน"
             value={editing.description || ""}
             onChange={e => setEditing({ ...editing, description: e.target.value })}
-            rows={5}
-            className="w-full border p-2 rounded resize-y"
-          />
-          <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)}/>
-          {editing.image_url && !file && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={editing.image_url} className="w-24 h-24 object-contain border rounded" alt=""/>
-          )}
-          <div className="flex gap-2">
-            <button disabled={busy} className="bg-emerald-500 text-white px-4 py-2 rounded disabled:opacity-50">
-              {busy ? "กำลังบันทึก..." : "บันทึก"}
-            </button>
-            <button type="button" onClick={() => { setEditing(null); setFile(null); }}
-              className="bg-gray-200 px-4 py-2 rounded">ยกเลิก</button>
-          </div>
-        </form>
-      )}
-
-      <div className="grid gap-2">
-        {products.map(p => (
-          <div key={p.id} className="bg-white p-3 rounded-xl shadow flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={p.image_url} className="w-16 h-16 object-contain bg-gray-50 rounded" alt=""/>
-            <div className="flex-1">
-              <div className="font-medium">{p.name}</div>
-              <div className="text-xs text-gray-500">{CATEGORIES.find(c => c.id === p.category)?.name}</div>
-              <div className="text-emerald-600 font-bold">฿{p.price.toLocaleString()}</div>
-            </div>
-            <button onClick={() => setEditing(p)} className="text-sm text-blue-500">แก้ไข</button>
-            <button onClick={() => del(p.id)} className="text-sm text-red-500">ลบ</button>
-          </div>
-        ))}
-        {products.length === 0 && <div className="text-center text-gray-500 py-8">ยังไม่มีสินค้า</div>}
-      </div>
-    </div>
-  );
-}
-
-function OrdersTab() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  useEffect(() => {
-    fetch("/api/orders/list").then(r => r.json()).then(d => setOrders(d.orders || []));
-  }, []);
-
-  function copyAddr(text: string) {
-    navigator.clipboard.writeText(text);
-    alert("คัดลอกที่อยู่แล้ว");
-  }
-
-  return (
-    <div className="grid gap-2">
-      {orders.map(o => (
-        <div key={o.id} className="bg-white p-3 rounded-xl shadow">
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>#{o.id.slice(0, 8)}</span>
-            <span>{new Date(o.created_at).toLocaleString("th-TH")}</span>
-          </div>
-          <div className="font-medium mt-1">{o.product_name}</div>
-          <div className="text-sm">ลูกค้า: <b>{o.customer_name}</b> · โทร: <a className="text-blue-500" href={`tel:${o.phone}`}>{o.phone}</a></div>
-          {o.address && (
-            <div className="mt-2 bg-gray-50 p-2 rounded">
-              <div className="flex justify-between items-start gap-2">
-                <div className="text-xs text-gray-700 whitespace-pre-wrap flex-1">📦 {o.address}</div>
-                <button onClick={() => copyAddr(o.address!)}
-                  className="text-xs text-blue-500 shrink-0">คัดลอก</button>
-              </div>
-            </div>
-          )}
-          <div className="text-emerald-600 font-bold mt-1">฿{o.price.toLocaleString()}</div>
-        </div>
-      ))}
-      {orders.length === 0 && <div className="text-center text-gray-500 py-8">ยังไม่มีออเดอร์</div>}
-    </div>
-  );
-}
+            rows={5} className="w-full border p-2 rounded resize-y"/>
+          <input type="file" accept="image/*" onChange={e => setFile(e.target.
