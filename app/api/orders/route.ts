@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
     product_name: body.product_name,
     customer_name: body.customer_name,
     phone: body.phone,
+    address: body.address || null,
     price: body.price
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
