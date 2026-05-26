@@ -176,22 +176,3 @@ function ProductsTab() {
 function OrdersTab() {
   const [orders, setOrders] = useState<Order[]>([]);
   useEffect(() => {
-    fetch("/api/orders/list").then(r => r.json()).then(d => setOrders(d.orders || []));
-  }, []);
-  return (
-    <div className="grid gap-2">
-      {orders.map(o => (
-        <div key={o.id} className="bg-white p-3 rounded-xl shadow">
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>#{o.id.slice(0, 8)}</span>
-            <span>{new Date(o.created_at).toLocaleString("th-TH")}</span>
-          </div>
-          <div className="font-medium mt-1">{o.product_name}</div>
-          <div className="text-sm">ลูกค้า: <b>{o.customer_name}</b> · โทร: <a className="text-blue-500" href={`tel:${o.phone}`}>{o.phone}</a></div>
-          <div className="text-emerald-600 font-bold">฿{o.price.toLocaleString()}</div>
-        </div>
-      ))}
-      {orders.length === 0 && <div className="text-center text-gray-500 py-8">ยังไม่มีออเดอร์</div>}
-    </div>
-  );
-}
