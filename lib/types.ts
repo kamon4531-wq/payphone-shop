@@ -16,6 +16,7 @@ export type Order = {
   product_name: string;
   customer_name: string;
   phone: string;
+  address: string | null;
   price: number;
   created_at: string;
 };
