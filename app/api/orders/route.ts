@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { isAdmin } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -20,4 +21,22 @@ export async function POST(req: NextRequest) {
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ order: data });
+}
+
+export async function DELETE(req: NextRequest) {
+  if (!isAdmin(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const id = req.nextUrl.searchParams.get("id");
+  const action = req.nextUrl.searchParams.get("action");
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+  if (action === "clear-slip") {
+    const { error } = await supabaseAdmin().from("orders")
+      .update({ slip_url: null, slip_id: null }).eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  const { error } = await supabaseAdmin().from("orders").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
 }
