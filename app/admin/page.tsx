@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Product, Order, CATEGORIES } from "@/lib/types";
 
 export default function AdminPage() {
@@ -62,6 +62,8 @@ function ProductsTab() {
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cat, setCat] = useState("all");
+  const [q, setQ] = useState("");
 
   async function load() {
     const r = await fetch("/api/products");
@@ -69,6 +71,18 @@ function ProductsTab() {
     setProducts(d.products || []);
   }
   useEffect(() => { load(); }, []);
+
+  const filtered = useMemo(() =>
+    products.filter(p =>
+      (cat === "all" || p.category === cat) &&
+      (q === "" || p.name.toLowerCase().includes(q.toLowerCase()))
+    ), [products, cat, q]);
+
+  const countByCat = useMemo(() => {
+    const m: Record<string, number> = { all: products.length };
+    products.forEach(p => { m[p.category] = (m[p.category] || 0) + 1; });
+    return m;
+  }, [products]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault(); setBusy(true);
@@ -99,8 +113,27 @@ function ProductsTab() {
 
   return (
     <div>
-      <button onClick={() => setEditing({ category: "case", price: 0, old_price: null, description: "" })}
-        className="mb-4 bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold">+ เพิ่มสินค้า</button>
+      <div className="flex flex-wrap gap-2 mb-3">
+        <button onClick={() => setEditing({ category: "case", price: 0, old_price: null, description: "" })}
+          className="bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold">+ เพิ่มสินค้า</button>
+        <input
+          value={q} onChange={e => setQ(e.target.value)}
+          placeholder="🔍 ค้นหาชื่อสินค้า..."
+          className="flex-1 min-w-[200px] border rounded-lg px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
+        {CATEGORIES.map(c => (
+          <button key={c.id} onClick={() => setCat(c.id)}
+            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs border transition ${
+              cat === c.id
+                ? "bg-emerald-400 border-emerald-400 text-black font-semibold"
+                : "bg-white border-gray-200 text-gray-700 hover:border-emerald-300"
+            }`}
+          >{c.name} ({countByCat[c.id] || 0})</button>
+        ))}
+      </div>
 
       {editing && (
         <form onSubmit={save} className="bg-white p-4 rounded-xl shadow mb-4 space-y-3">
@@ -141,21 +174,23 @@ function ProductsTab() {
         </form>
       )}
 
+      <div className="text-xs text-gray-500 mb-2">แสดง {filtered.length} จาก {products.length} รายการ</div>
+
       <div className="grid gap-2">
-        {products.map(p => (
+        {filtered.map(p => (
           <div key={p.id} className="bg-white p-3 rounded-xl shadow flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={p.image_url} className="w-16 h-16 object-contain bg-gray-50 rounded" alt=""/>
-            <div className="flex-1">
-              <div className="font-medium">{p.name}</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium truncate">{p.name}</div>
               <div className="text-xs text-gray-500">{CATEGORIES.find(c => c.id === p.category)?.name}</div>
               <div className="text-emerald-600 font-bold">฿{p.price.toLocaleString()}</div>
             </div>
-            <button onClick={() => setEditing(p)} className="text-sm text-blue-500">แก้ไข</button>
-            <button onClick={() => del(p.id)} className="text-sm text-red-500">ลบ</button>
+            <button onClick={() => setEditing(p)} className="text-sm text-blue-500 shrink-0">แก้ไข</button>
+            <button onClick={() => del(p.id)} className="text-sm text-red-500 shrink-0">ลบ</button>
           </div>
         ))}
-        {products.length === 0 && <div className="text-center text-gray-500 py-8">ยังไม่มีสินค้า</div>}
+        {filtered.length === 0 && <div className="text-center text-gray-500 py-8">ไม่พบสินค้าที่ตรงเงื่อนไข</div>}
       </div>
     </div>
   );
@@ -178,7 +213,7 @@ function OrdersTab() {
   }
 
   async function delSlip(id: string) {
-    if (!confirm("ลบสลิปออเดอร์นี้? (ออเดอร์ยังอยู่)")) return;
+    if (!confirm("ลบสลิปออเดอร์นี้?")) return;
     const r = await fetch(`/api/orders?id=${id}&action=clear-slip`, { method: "DELETE" });
     if (r.ok) load(); else alert("ลบไม่สำเร็จ");
   }
