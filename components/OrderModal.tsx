@@ -145,7 +145,7 @@ export default function OrderModal({
             <div className="bg-gray-50 p-3 rounded-lg text-center">
               <div className="text-sm font-semibold mb-2">สแกน QR เพื่อชำระเงิน</div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/qr.png" alt="QR PromptPay" className="mx-auto max-w-[220px] w-full"
+              <img src="/qr.jpg" alt="QR PromptPay" className="mx-auto max-w-[220px] w-full"
                 onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}}/>
               <div className="text-xs text-gray-500 mt-2">PromptPay</div>
             </div>
