@@ -13,8 +13,11 @@ export default function OrderModal({
   const [transferTime, setTransferTime] = useState("");
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
 
   if (!product) return null;
+
+  const images = [product.image_url, product.image_url2, product.image_url3].filter(Boolean) as string[];
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,13 +75,31 @@ export default function OrderModal({
           <div className="overflow-y-auto">
             <div className="relative bg-gray-50 aspect-square">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={product.image_url} alt={product.name} className="w-full h-full object-contain p-4"/>
+              <img src={images[imgIdx]} alt={product.name} className="w-full h-full object-contain p-4"/>
               {discount>0 && (
                 <span className="absolute top-3 right-3 bg-orange-500 text-white text-sm font-bold px-3 py-1 rounded-md">
                   {discount}% OFF
                 </span>
               )}
+              {images.length > 1 && (
+                <>
+                  <button onClick={() => setImgIdx(i => (i - 1 + images.length) % images.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-9 h-9 shadow">‹</button>
+                  <button onClick={() => setImgIdx(i => (i + 1) % images.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-9 h-9 shadow">›</button>
+                </>
+              )}
             </div>
+            {images.length > 1 && (
+              <div className="flex gap-2 p-3 justify-center border-b">
+                {images.map((img, idx) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={idx} src={img} alt={`${idx+1}`}
+                    onClick={() => setImgIdx(idx)}
+                    className={`w-14 h-14 object-contain border-2 rounded cursor-pointer ${idx===imgIdx?"border-emerald-500":"border-gray-200"}`}/>
+                ))}
+              </div>
+            )}
             <div className="p-4 space-y-3">
               <h2 className="text-lg font-bold">{product.name}</h2>
               <div className="flex items-baseline gap-2">
