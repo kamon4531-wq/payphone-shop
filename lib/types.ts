@@ -6,6 +6,8 @@ export type Product = {
   old_price: number | null;
   description: string | null;
   image_url: string;
+  image_url2: string | null;
+  image_url3: string | null;
   drive_file_id: string | null;
   created_at: string;
 };
