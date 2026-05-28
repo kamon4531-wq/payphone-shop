@@ -60,7 +60,9 @@ function Dashboard() {
 function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([]);
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [file1, setFile1] = useState<File | null>(null);
+  const [file2, setFile2] = useState<File | null>(null);
+  const [file3, setFile3] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [cat, setCat] = useState("all");
   const [q, setQ] = useState("");
@@ -84,24 +86,44 @@ function ProductsTab() {
     return m;
   }, [products]);
 
+  async function uploadFile(f: File): Promise<{ url: string; id: string } | null> {
+    const fd = new FormData(); fd.append("file", f);
+    const up = await fetch("/api/upload", { method: "POST", body: fd });
+    if (!up.ok) return null;
+    return await up.json();
+  }
+
   async function save(e: React.FormEvent) {
     e.preventDefault(); setBusy(true);
     let image_url = editing?.image_url || "";
+    let image_url2 = editing?.image_url2 || null;
+    let image_url3 = editing?.image_url3 || null;
     let drive_file_id = editing?.drive_file_id || null;
-    if (file) {
-      const fd = new FormData(); fd.append("file", file);
-      const up = await fetch("/api/upload", { method: "POST", body: fd });
-      if (!up.ok) { alert("อัพโหลดรูปล้มเหลว"); setBusy(false); return; }
-      const j = await up.json(); image_url = j.url; drive_file_id = j.id;
+
+    if (file1) {
+      const r = await uploadFile(file1);
+      if (!r) { alert("อัพโหลดรูปที่ 1 ล้มเหลว"); setBusy(false); return; }
+      image_url = r.url; drive_file_id = r.id;
     }
-    const body = { ...editing, image_url, drive_file_id };
+    if (file2) {
+      const r = await uploadFile(file2);
+      if (!r) { alert("อัพโหลดรูปที่ 2 ล้มเหลว"); setBusy(false); return; }
+      image_url2 = r.url;
+    }
+    if (file3) {
+      const r = await uploadFile(file3);
+      if (!r) { alert("อัพโหลดรูปที่ 3 ล้มเหลว"); setBusy(false); return; }
+      image_url3 = r.url;
+    }
+
+    const body = { ...editing, image_url, image_url2, image_url3, drive_file_id };
     const r = await fetch("/api/products", {
       method: editing?.id ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
     });
     setBusy(false);
-    if (r.ok) { setEditing(null); setFile(null); load(); }
+    if (r.ok) { setEditing(null); setFile1(null); setFile2(null); setFile3(null); load(); }
     else alert("บันทึกล้มเหลว");
   }
 
@@ -111,16 +133,36 @@ function ProductsTab() {
     load();
   }
 
+  function ImageSlot({ label, current, file, setFile, onClear }: any) {
+    return (
+      <div className="border rounded p-2">
+        <div className="text-xs font-semibold mb-1">{label}</div>
+        {(file || current) && (
+          <div className="relative inline-block mb-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={file ? URL.createObjectURL(file) : current}
+              className="w-20 h-20 object-contain border rounded" alt=""/>
+            {current && !file && (
+              <button type="button" onClick={onClear}
+                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs">×</button>
+            )}
+          </div>
+        )}
+        <input type="file" accept="image/*"
+          onChange={e => setFile(e.target.files?.[0] || null)}
+          className="block w-full text-xs"/>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-3">
         <button onClick={() => setEditing({ category: "case", price: 0, old_price: null, description: "" })}
           className="bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold">+ เพิ่มสินค้า</button>
-        <input
-          value={q} onChange={e => setQ(e.target.value)}
+        <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="🔍 ค้นหาชื่อสินค้า..."
-          className="flex-1 min-w-[200px] border rounded-lg px-3 py-2 text-sm"
-        />
+          className="flex-1 min-w-[200px] border rounded-lg px-3 py-2 text-sm"/>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
@@ -160,15 +202,20 @@ function ProductsTab() {
             value={editing.description || ""}
             onChange={e => setEditing({ ...editing, description: e.target.value })}
             rows={5} className="w-full border p-2 rounded resize-y"/>
-          <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)}/>
-          {editing.image_url && !file && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={editing.image_url} className="w-24 h-24 object-contain border rounded" alt=""/>
-          )}
+
+          <div className="grid grid-cols-3 gap-2">
+            <ImageSlot label="รูปหลัก *" current={editing.image_url} file={file1} setFile={setFile1}
+              onClear={() => setEditing({ ...editing, image_url: "" })}/>
+            <ImageSlot label="รูปที่ 2" current={editing.image_url2} file={file2} setFile={setFile2}
+              onClear={() => setEditing({ ...editing, image_url2: null })}/>
+            <ImageSlot label="รูปที่ 3" current={editing.image_url3} file={file3} setFile={setFile3}
+              onClear={() => setEditing({ ...editing, image_url3: null })}/>
+          </div>
+
           <div className="flex gap-2">
             <button disabled={busy} className="bg-emerald-500 text-white px-4 py-2 rounded disabled:opacity-50">
               {busy ? "กำลังบันทึก..." : "บันทึก"}</button>
-            <button type="button" onClick={() => { setEditing(null); setFile(null); }}
+            <button type="button" onClick={() => { setEditing(null); setFile1(null); setFile2(null); setFile3(null); }}
               className="bg-gray-200 px-4 py-2 rounded">ยกเลิก</button>
           </div>
         </form>
@@ -258,7 +305,6 @@ function OrdersTab() {
           📥 Export CSV
         </button>
       </div>
-
       <div className="grid gap-2">
         {orders.map(o => (
           <div key={o.id} className="bg-white p-3 rounded-xl shadow">
@@ -298,7 +344,6 @@ function OrdersTab() {
         ))}
         {orders.length === 0 && <div className="text-center text-gray-500 py-8">ยังไม่มีออเดอร์</div>}
       </div>
-
       {viewSlip && (
         <div onClick={() => setViewSlip(null)}
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-pointer">
