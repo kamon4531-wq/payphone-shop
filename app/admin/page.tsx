@@ -158,7 +158,7 @@ function ProductsTab() {
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-3">
-        <button onClick={() => setEditing({ category: "case", price: 0, old_price: null, description: "" })}
+        <button onClick={() => setEditing({ category: "case", price: 0, old_price: null, description: "", badge_text: "" })}
           className="bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold">+ เพิ่มสินค้า</button>
         <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="🔍 ค้นหาชื่อสินค้า..."
@@ -198,6 +198,10 @@ function ProductsTab() {
               onChange={e => setEditing({ ...editing, old_price: e.target.value ? Number(e.target.value) : null })}
               className="border p-2 rounded"/>
           </div>
+          <input placeholder="ป้ายโปรโมชั่น (เช่น SALE 30%, NEW, FLASH SALE, PAY DAY) - เว้นว่างถ้าไม่ใช้"
+            value={editing.badge_text || ""}
+            onChange={e => setEditing({ ...editing, badge_text: e.target.value })}
+            className="w-full border p-2 rounded"/>
           <textarea placeholder="รายละเอียดสินค้า เช่น ความจุ, คุณสมบัติ, ขนาด, การรับประกัน"
             value={editing.description || ""}
             onChange={e => setEditing({ ...editing, description: e.target.value })}
@@ -275,15 +279,9 @@ function OrdersTab() {
     const headers = ["วันที่สั่ง","เลขออเดอร์","ชื่อ","เบอร์","จังหวัด","ที่อยู่","สินค้า","ราคา","เวลาโอน","เลขสลิป"];
     const rows = orders.map(o => [
       new Date(o.created_at).toLocaleString("th-TH"),
-      o.id,
-      o.customer_name,
-      o.phone,
-      o.province || "",
+      o.id, o.customer_name, o.phone, o.province || "",
       (o.address || "").replace(/\n/g, " "),
-      o.product_name,
-      o.price,
-      o.transfer_time || "",
-      o.slip_id || ""
+      o.product_name, o.price, o.transfer_time || "", o.slip_id || ""
     ]);
     const csv = [headers, ...rows].map(r =>
       r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")
@@ -301,9 +299,7 @@ function OrdersTab() {
       <div className="flex justify-between items-center mb-3">
         <span className="text-sm text-gray-500">ทั้งหมด {orders.length} ออเดอร์</span>
         <button onClick={exportCSV}
-          className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold">
-          📥 Export CSV
-        </button>
+          className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold">📥 Export CSV</button>
       </div>
       <div className="grid gap-2">
         {orders.map(o => (
