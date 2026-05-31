@@ -14,6 +14,7 @@ export default function OrderModal({
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
+  const [zoom, setZoom] = useState({ show: false, x: 0, y: 0 });
 
   if (!product) return null;
 
@@ -49,6 +50,13 @@ export default function OrderModal({
   const discount = product.old_price && product.old_price > product.price
     ? Math.round(((product.old_price - product.price) / product.old_price) * 100) : 0;
 
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoom({ show: true, x, y });
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
@@ -73,20 +81,34 @@ export default function OrderModal({
 
         {step==="detail" && (
           <div className="overflow-y-auto">
-            <div className="relative bg-gray-50 aspect-square">
+            <div
+              className="relative bg-gray-50 aspect-square overflow-hidden cursor-zoom-in"
+              onMouseMove={handleMouseMove}
+              onMouseLeave={() => setZoom({ show: false, x: 0, y: 0 })}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={images[imgIdx]} alt={product.name} className="w-full h-full object-contain p-4"/>
-              {discount>0 && (
-                <span className="absolute top-3 right-3 bg-orange-500 text-white text-sm font-bold px-3 py-1 rounded-md">
+              <img src={images[imgIdx]} alt={product.name}
+                className="w-full h-full object-contain p-4 transition-transform duration-200"
+                style={zoom.show ? {
+                  transform: `scale(2.2)`,
+                  transformOrigin: `${zoom.x}% ${zoom.y}%`
+                } : {}}/>
+              {product.badge_text && (
+                <span className="absolute top-3 left-3 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-md shadow-lg z-10">
+                  {product.badge_text}
+                </span>
+              )}
+              {discount>0 && !product.badge_text && (
+                <span className="absolute top-3 right-3 bg-orange-500 text-white text-sm font-bold px-3 py-1 rounded-md z-10">
                   {discount}% OFF
                 </span>
               )}
               {images.length > 1 && (
                 <>
                   <button onClick={() => setImgIdx(i => (i - 1 + images.length) % images.length)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-9 h-9 shadow">‹</button>
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-9 h-9 shadow z-10">‹</button>
                   <button onClick={() => setImgIdx(i => (i + 1) % images.length)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-9 h-9 shadow">›</button>
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-9 h-9 shadow z-10">›</button>
                 </>
               )}
             </div>
@@ -105,6 +127,9 @@ export default function OrderModal({
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-emerald-600">฿{product.price.toLocaleString()}</span>
                 {product.old_price && <span className="text-sm text-gray-400 line-through">฿{product.old_price.toLocaleString()}</span>}
+                {discount>0 && product.badge_text && (
+                  <span className="text-xs text-orange-500 font-bold">ลด {discount}%</span>
+                )}
               </div>
               {product.description && (
                 <div className="bg-gray-50 p-3 rounded-lg">
