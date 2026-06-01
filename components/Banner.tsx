@@ -3,6 +3,13 @@ import { useEffect, useState } from "react";
 
 const SLIDES = [
   {
+    title: "iPhone 17 Series",
+    subtitle: "เคสคุณภาพพรีเมียม ของแท้ 100%",
+    badge: "ช้อปเลย",
+    bg: "from-green-700 via-green-500 to-lime-400",
+    image: "/slide4.png"
+  },
+  {
     title: "SUPER CHARGING WEEK",
     subtitle: "หัวชาร์จเร็ว GaN + สายชาร์จเกรดทหาร",
     badge: "เริ่มต้น ฿150",
