@@ -2,6 +2,24 @@
 import { useState } from "react";
 import { Product, THAI_PROVINCES } from "@/lib/types";
 
+const BRANCHES = [
+  "B55:PA โรบินสัน จันทบุรี",
+  "B64:PA โรบินสัน ชลบุรี",
+  "B84:PA เซ็นทรัล จันทบุรี",
+  "B34:PA โรบินสัน ฉะเชิงเทรา",
+  "B12:PA โรบินสัน ศรีราชา",
+  "B13:PA เซ็นทรัล พัทยาบีช",
+  "B37:PA โรบินสัน ปราจีนบุรี",
+  "B40:PA เซ็นทรัล ระยอง",
+  "B36:PA โรบินสัน สมุทรปราการ",
+  "B35:PA แพชชั่น ระยอง 2",
+  "B81:PA โรบินสัน บ้านฉาง",
+  "B10:PA ดีกคอม พัทยาใต้",
+  "B11:PA โรบินสัน ชลบุรี",
+  "B72:PA โรบินสัน สุวรรณภูมิ",
+  "B82:PA เซ็นทรัล ศรีราชา",
+];
+
 export default function OrderModal({
   product, onClose
 }: { product: Product | null; onClose: () => void }) {
@@ -9,6 +27,7 @@ export default function OrderModal({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [branch, setBranch] = useState("");
   const [province, setProvince] = useState("");
   const [transferTime, setTransferTime] = useState("");
   const [slipFile, setSlipFile] = useState<File | null>(null);
@@ -37,7 +56,7 @@ export default function OrderModal({
         product_name: product!.name,
         price: product!.price,
         customer_name: name,
-        phone, address, province,
+        phone, address: branch, province,
         transfer_time: transferTime,
         slip_url: slipData.url,
         slip_id: slipData.id
@@ -159,18 +178,20 @@ export default function OrderModal({
                 className="w-full border rounded-lg p-2 mt-1" placeholder="0XXXXXXXXX"/>
             </div>
             <div>
+              <label className="text-sm text-gray-700">สาขาที่ซื้อ <span className="text-red-500">*</span></label>
+              <select required value={branch} onChange={e=>setBranch(e.target.value)}
+                className="w-full border rounded-lg p-2 mt-1">
+                <option value="">-- เลือกสาขา --</option>
+                {BRANCHES.map(b=> <option key={b} value={b}>{b}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="text-sm text-gray-700">จังหวัด <span className="text-red-500">*</span></label>
               <select required value={province} onChange={e=>setProvince(e.target.value)}
                 className="w-full border rounded-lg p-2 mt-1">
                 <option value="">-- เลือกจังหวัด --</option>
                 {THAI_PROVINCES.map(p=> <option key={p} value={p}>{p}</option>)}
               </select>
-            </div>
-            <div>
-              <label className="text-sm text-gray-700">ที่อยู่จัดส่ง <span className="text-red-500">*</span></label>
-              <textarea required value={address} onChange={e=>setAddress(e.target.value)} rows={4}
-                className="w-full border rounded-lg p-2 mt-1 resize-y"
-                placeholder="บ้านเลขที่ ซอย ถนน แขวง/ตำบล เขต/อำเภอ รหัสไปรษณีย์"/>
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={()=>setStep("detail")}
