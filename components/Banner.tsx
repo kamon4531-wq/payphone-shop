@@ -59,7 +59,7 @@ export default function Banner() {
         <div className="w-2/5 md:w-1/2 h-full flex items-center justify-end pr-3 md:pr-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={s.image} alt={s.title}
-            className="max-h-[85%] max-w-full object-contain drop-shadow-2xl transition-all duration-700"
+            className="w-full h-full object-cover drop-shadow-2xl transition-all duration-700"
             onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}}/>
         </div>
       </div>
