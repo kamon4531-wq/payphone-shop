@@ -7,7 +7,7 @@ export default function ProductCard({ p, onBuy }: { p: Product; onBuy: (p: Produ
     ? Math.round(((p.old_price - p.price) / p.old_price) * 100)
     : 0;
 
-  const images = [p.image_url, p.image_url2, p.image_url3].filter(Boolean) as string[];
+  const images = [p.image_url, p.image_url2, p.image_url3].filter(x => x && x !== "null") as string[];
   const [imgIdx, setImgIdx] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
