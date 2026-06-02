@@ -57,6 +57,21 @@ export default function ProductCard({ p, onBuy }: { p: Product; onBuy: (p: Produ
         )}
       </div>
 
+      {images.length > 1 && (
+        <div className="flex gap-1 px-2 py-1 justify-center border-b">
+          {images.map((img, idx) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={idx}
+              src={img}
+              alt={`${idx + 1}`}
+              onClick={() => setImgIdx(idx)}
+              className={`w-10 h-10 object-contain border-2 rounded cursor-pointer ${idx === imgIdx ? "border-emerald-500" : "border-gray-200"}`}
+            />
+          ))}
+        </div>
+      )}
+
       <div className="p-3 flex flex-col flex-1">
         <h3 className="text-sm font-medium line-clamp-2 min-h-[2.5rem]">{p.name}</h3>
         <div className="mt-2 flex items-baseline gap-2">
