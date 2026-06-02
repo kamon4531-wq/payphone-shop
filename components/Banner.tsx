@@ -13,21 +13,21 @@ const SLIDES = [
     title: "SUPER CHARGING WEEK",
     subtitle: "หัวชาร์จเร็ว GaN + สายชาร์จเกรดทหาร",
     badge: "เริ่มต้น ฿150",
-    bg: "from-emerald-700 via-emerald-500 to-lime-400",
+    bg: "from-green-700 via-green-500 to-lime-400",
     image: "/slide1.png"
   },
   {
     title: "MAGSAFE COLLECTION",
     subtitle: "เคส MagSafe Premium iPhone 15/16 Pro Max",
     badge: "ลด 51%",
-    bg: "from-slate-800 via-slate-600 to-gray-400",
+    bg: "from-green-700 via-green-500 to-lime-400",
     image: "/slide2.png"
   },
   {
     title: "POWER UP ANYWHERE",
     subtitle: "พาวเวอร์แบงค์ไร้สาย Magnetic 10000mAh",
     badge: "พกพาสะดวก",
-    bg: "from-indigo-700 via-purple-600 to-pink-500",
+    bg: "from-green-700 via-green-500 to-lime-400",
     image: "/slide3.png"
   }
 ];
@@ -56,7 +56,7 @@ export default function Banner() {
             <div className="text-sm font-bold">{s.badge}</div>
           </div>
         </div>
-        <div className="w-2/5 md:w-1/2 h-full flex items-center justify-end pr-3 md:pr-8">
+        <div className={`w-2/5 md:w-1/2 h-full flex items-center ${s.image === "/slide4.png" ? "justify-start pl-0" : "justify-end pr-3 md:pr-8"}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={s.image} alt={s.title}
             className="max-h-[85%] max-w-full object-contain drop-shadow-2xl transition-all duration-700"
