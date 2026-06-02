@@ -49,10 +49,17 @@ export default function Banner() {
         onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}}/>
 
       <div className="relative z-10 h-full flex items-center">
-        <div className="w-full h-full flex items-center justify-center">
+        <div className="flex-1 p-5 md:p-8 text-white">
+          <h2 className="text-xl md:text-3xl font-extrabold tracking-wide drop-shadow-lg">{s.title}</h2>
+          <p className="mt-2 text-xs md:text-base opacity-95 max-w-xs drop-shadow">{s.subtitle}</p>
+          <div className="mt-3 inline-block bg-black/30 backdrop-blur px-3 py-2 rounded-lg">
+            <div className="text-sm font-bold">{s.badge}</div>
+          </div>
+        </div>
+        <div className="w-2/5 md:w-1/2 h-full flex items-center justify-end pr-3 md:pr-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={s.image} alt={s.title}
-            className="w-full h-full object-contain drop-shadow-2xl transition-all duration-700"
+            className="max-h-[85%] max-w-full object-contain drop-shadow-2xl transition-all duration-700"
             onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}}/>
         </div>
       </div>
