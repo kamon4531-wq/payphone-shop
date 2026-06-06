@@ -2,24 +2,6 @@
 import { useState } from "react";
 import { Product, THAI_PROVINCES } from "@/lib/types";
 
-const BRANCHES = [
-  "B55:PA โรบินสัน จันทบุรี",
-  "B64:PA โรบินสัน ชลบุรี",
-  "B84:PA เซ็นทรัล จันทบุรี",
-  "B34:PA โรบินสัน ฉะเชิงเทรา",
-  "B12:PA โรบินสัน ศรีราชา",
-  "B13:PA เซ็นทรัล พัทยาบีช",
-  "B37:PA โรบินสัน ปราจีนบุรี",
-  "B40:PA เซ็นทรัล ระยอง",
-  "B36:PA โรบินสัน สมุทรปราการ",
-  "B35:PA แพชชั่น ระยอง 2",
-  "B81:PA โรบินสัน บ้านฉาง",
-  "B10:PA ดีกคอม พัทยาใต้",
-  "B11:PA โรบินสัน ชลบุรี",
-  "B72:PA โรบินสัน สุวรรณภูมิ",
-  "B82:PA เซ็นทรัล ศรีราชา",
-];
-
 export default function OrderModal({
   product, onClose
 }: { product: Product | null; onClose: () => void }) {
@@ -27,17 +9,16 @@ export default function OrderModal({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [branch, setBranch] = useState("");
   const [province, setProvince] = useState("");
   const [transferTime, setTransferTime] = useState("");
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
-  const [zoom, setZoom] = useState({ show: false, x: 0, y: 0 });
 
   if (!product) return null;
 
   const images = [product.image_url, product.image_url2, product.image_url3].filter(Boolean) as string[];
+  const badge = product.badge_text && product.badge_text !== "null" ? product.badge_text : null;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,7 +37,7 @@ export default function OrderModal({
         product_name: product!.name,
         price: product!.price,
         customer_name: name,
-        phone, address: branch, province,
+        phone, address, province,
         transfer_time: transferTime,
         slip_url: slipData.url,
         slip_id: slipData.id
@@ -68,13 +49,6 @@ export default function OrderModal({
 
   const discount = product.old_price && product.old_price > product.price
     ? Math.round(((product.old_price - product.price) / product.old_price) * 100) : 0;
-
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setZoom({ show: true, x, y });
-  }
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -100,24 +74,16 @@ export default function OrderModal({
 
         {step==="detail" && (
           <div className="overflow-y-auto">
-            <div
-              className="relative bg-gray-50 aspect-square overflow-hidden cursor-zoom-in"
-              onMouseMove={handleMouseMove}
-              onMouseLeave={() => setZoom({ show: false, x: 0, y: 0 })}
-            >
+            <div className="relative bg-gray-50 h-64 md:h-72 overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={images[imgIdx]} alt={product.name}
-                className="w-full h-full object-contain p-4 transition-transform duration-200"
-                style={zoom.show ? {
-                  transform: `scale(2.2)`,
-                  transformOrigin: `${zoom.x}% ${zoom.y}%`
-                } : {}}/>
-              {product.badge_text && (
+                className="w-full h-full object-contain p-4"/>
+              {badge && (
                 <span className="absolute top-3 left-3 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-md shadow-lg z-10">
-                  {product.badge_text}
+                  {badge}
                 </span>
               )}
-              {discount>0 && !product.badge_text && (
+              {discount>0 && !badge && (
                 <span className="absolute top-3 right-3 bg-orange-500 text-white text-sm font-bold px-3 py-1 rounded-md z-10">
                   {discount}% OFF
                 </span>
@@ -146,7 +112,7 @@ export default function OrderModal({
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-emerald-600">฿{product.price.toLocaleString()}</span>
                 {product.old_price && <span className="text-sm text-gray-400 line-through">฿{product.old_price.toLocaleString()}</span>}
-                {discount>0 && product.badge_text && (
+                {discount>0 && badge && (
                   <span className="text-xs text-orange-500 font-bold">ลด {discount}%</span>
                 )}
               </div>
@@ -172,74 +138,4 @@ export default function OrderModal({
                 className="w-full border rounded-lg p-2 mt-1" placeholder="กรอกชื่อ"/>
             </div>
             <div>
-              <label className="text-sm text-gray-700">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
-              <input required value={phone} onChange={e=>setPhone(e.target.value)}
-                pattern="[0-9]{9,10}" inputMode="numeric"
-                className="w-full border rounded-lg p-2 mt-1" placeholder="0XXXXXXXXX"/>
-            </div>
-            <div>
-              <label className="text-sm text-gray-700">สาขาที่ซื้อ <span className="text-red-500">*</span></label>
-              <select required value={branch} onChange={e=>setBranch(e.target.value)}
-                className="w-full border rounded-lg p-2 mt-1">
-                <option value="">-- เลือกสาขา --</option>
-                {BRANCHES.map(b=> <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm text-gray-700">จังหวัด <span className="text-red-500">*</span></label>
-              <select required value={province} onChange={e=>setProvince(e.target.value)}
-                className="w-full border rounded-lg p-2 mt-1">
-                <option value="">-- เลือกจังหวัด --</option>
-                {THAI_PROVINCES.map(p=> <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={()=>setStep("detail")}
-                className="flex-1 bg-gray-200 py-3 rounded-lg">← ย้อนกลับ</button>
-              <button className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg">
-                ดำเนินการชำระเงิน →
-              </button>
-            </div>
-          </form>
-        )}
-
-        {step==="pay" && (
-          <form onSubmit={submit} className="p-4 space-y-3 overflow-y-auto">
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
-              <div className="text-xs text-gray-600">ยอดที่ต้องโอน</div>
-              <div className="text-2xl font-bold text-emerald-600">฿{product.price.toLocaleString()}</div>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-lg text-center">
-              <div className="text-sm font-semibold mb-2">สแกน QR เพื่อชำระเงิน</div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/qr.jpg" alt="QR PromptPay" className="mx-auto max-w-[220px] w-full"
-                onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}}/>
-              <div className="text-xs text-gray-500 mt-2">PromptPay</div>
-            </div>
-            <div>
-              <label className="text-sm text-gray-700">เวลาที่โอน <span className="text-red-500">*</span></label>
-              <input required type="datetime-local" value={transferTime}
-                onChange={e=>setTransferTime(e.target.value)}
-                className="w-full border rounded-lg p-2 mt-1"/>
-            </div>
-            <div>
-              <label className="text-sm text-gray-700">อัพโหลดสลิป <span className="text-red-500">*</span></label>
-              <input required type="file" accept="image/*"
-                onChange={e=>setSlipFile(e.target.files?.[0] || null)}
-                className="w-full border rounded-lg p-2 mt-1"/>
-              {slipFile && <div className="text-xs text-green-600 mt-1">✓ {slipFile.name}</div>}
-            </div>
-            <div className="flex gap-2">
-              <button type="button" onClick={()=>setStep("info")}
-                className="flex-1 bg-gray-200 py-3 rounded-lg">← ย้อนกลับ</button>
-              <button disabled={loading}
-                className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-semibold py-3 rounded-lg">
-                {loading ? "กำลังส่ง..." : "ยืนยันสั่งซื้อ"}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-}
+              <label className="text-sm text-gray-700">เบอร์โทรศัพท์ <span className="text-red
