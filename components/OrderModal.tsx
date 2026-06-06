@@ -14,6 +14,7 @@ export default function OrderModal({
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
+  const [zoom, setZoom] = useState({ show: false, x: 0, y: 0 });
 
   if (!product) return null;
 
@@ -50,6 +51,13 @@ export default function OrderModal({
   const discount = product.old_price && product.old_price > product.price
     ? Math.round(((product.old_price - product.price) / product.old_price) * 100) : 0;
 
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoom({ show: true, x, y });
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
@@ -74,10 +82,18 @@ export default function OrderModal({
 
         {step==="detail" && (
           <div className="overflow-y-auto">
-            <div className="relative bg-gray-50 h-64 md:h-72 overflow-hidden">
+            <div
+              className="relative bg-gray-50 h-64 md:h-72 overflow-hidden cursor-zoom-in"
+              onMouseMove={handleMouseMove}
+              onMouseLeave={() => setZoom({ show: false, x: 0, y: 0 })}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={images[imgIdx]} alt={product.name}
-                className="w-full h-full object-contain p-4"/>
+                className="w-full h-full object-contain p-4 transition-transform duration-200"
+                style={zoom.show ? {
+                  transform: `scale(2)`,
+                  transformOrigin: `${zoom.x}% ${zoom.y}%`
+                } : {}}/>
               {badge && (
                 <span className="absolute top-3 left-3 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-md shadow-lg z-10">
                   {badge}
