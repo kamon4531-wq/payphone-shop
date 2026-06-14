@@ -26,6 +26,7 @@ export type Order = {
   slip_url: string | null;
   slip_id: string | null;
   transfer_time: string | null;
+  order_number: string | null;
   created_at: string;
 };
 
