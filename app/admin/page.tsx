@@ -284,13 +284,14 @@ function OrdersTab() {
   , [orders]);
 
   function exportCSV() {
-    const headers = ["วันที่สั่ง","เลขออเดอร์","ชื่อ","เบอร์","สาขา","จังหวัด","ที่อยู่","สินค้า","ราคา","เวลาโอน","เลขสลิป"];
+    const headers = ["เลขออเดอร์","วันที่สั่ง","ชื่อ","เบอร์","สาขา","จังหวัด","ที่อยู่","สินค้า","ราคา","เวลาโอน"];
     const rows = filtered.map(o => [
+      o.order_number || o.id.slice(0,8),
       new Date(o.created_at).toLocaleString("th-TH"),
-      o.id, o.customer_name, o.phone, o.branch || "",
+      o.customer_name, o.phone, o.branch || "",
       o.province || "",
       (o.address || "").replace(/\n/g, " "),
-      o.product_name, o.price, o.transfer_time || "", o.slip_id || ""
+      o.product_name, o.price, o.transfer_time || ""
     ]);
     const csv = [headers, ...rows].map(r =>
       r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")
@@ -321,7 +322,7 @@ function OrdersTab() {
         {filtered.map(o => (
           <div key={o.id} className="bg-white p-3 rounded-xl shadow">
             <div className="flex justify-between text-xs text-gray-500">
-              <span>#{o.id.slice(0, 8)}</span>
+              <span className="font-bold text-blue-600">{o.order_number || `#${o.id.slice(0, 8)}`}</span>
               <span>{new Date(o.created_at).toLocaleString("th-TH")}</span>
             </div>
             <div className="font-medium mt-1">{o.product_name}</div>
