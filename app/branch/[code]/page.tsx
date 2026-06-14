@@ -27,6 +27,8 @@ export default function BranchPage() {
     );
   }
 
+  const registerUrl = `http://183.88.225.82:81/PAMember/register/${code}`;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 text-center">
@@ -37,6 +39,11 @@ export default function BranchPage() {
         </div>
         <p className="text-gray-700 font-medium mb-1">{branch.name}</p>
         <p className="text-sm text-gray-500 mb-6">ขอบคุณที่ใช้บริการของเรา</p>
+
+        <a href={registerUrl} target="_blank" rel="noreferrer"
+          className="block w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg mb-3 shadow">
+          📝 สมัครสมาชิก PA Member
+        </a>
 
         <a href="/" className="block w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg mb-3 shadow">
           🛒 ดูสินค้าราคาพิเศษ
