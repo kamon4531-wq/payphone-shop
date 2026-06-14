@@ -198,11 +198,10 @@ function ProductsTab() {
               onChange={e => setEditing({ ...editing, old_price: e.target.value ? Number(e.target.value) : null })}
               className="border p-2 rounded"/>
           </div>
-          <input placeholder="ป้ายโปรโมชั่น (เช่น SALE 30%, NEW, FLASH SALE, PAY DAY) - เว้นว่างถ้าไม่ใช้"
-            value={editing.badge_text || ""}
+          <input placeholder="ป้ายโปรโมชั่น (เช่น SALE 30%, NEW)" value={editing.badge_text || ""}
             onChange={e => setEditing({ ...editing, badge_text: e.target.value })}
             className="w-full border p-2 rounded"/>
-          <textarea placeholder="รายละเอียดสินค้า เช่น ความจุ, คุณสมบัติ, ขนาด, การรับประกัน"
+          <textarea placeholder="รายละเอียดสินค้า"
             value={editing.description || ""}
             onChange={e => setEditing({ ...editing, description: e.target.value })}
             rows={5} className="w-full border p-2 rounded resize-y"/>
@@ -250,6 +249,7 @@ function ProductsTab() {
 function OrdersTab() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [viewSlip, setViewSlip] = useState<string | null>(null);
+  const [branchFilter, setBranchFilter] = useState("");
 
   async function load() {
     const r = await fetch("/api/orders/list");
@@ -275,11 +275,20 @@ function OrdersTab() {
     if (r.ok) load(); else alert("ลบไม่สำเร็จ");
   }
 
+  const filtered = useMemo(() =>
+    branchFilter ? orders.filter(o => o.branch === branchFilter) : orders
+  , [orders, branchFilter]);
+
+  const branchList = useMemo(() =>
+    Array.from(new Set(orders.map(o => o.branch).filter(Boolean))) as string[]
+  , [orders]);
+
   function exportCSV() {
-    const headers = ["วันที่สั่ง","เลขออเดอร์","ชื่อ","เบอร์","จังหวัด","ที่อยู่","สินค้า","ราคา","เวลาโอน","เลขสลิป"];
-    const rows = orders.map(o => [
+    const headers = ["วันที่สั่ง","เลขออเดอร์","ชื่อ","เบอร์","สาขา","จังหวัด","ที่อยู่","สินค้า","ราคา","เวลาโอน","เลขสลิป"];
+    const rows = filtered.map(o => [
       new Date(o.created_at).toLocaleString("th-TH"),
-      o.id, o.customer_name, o.phone, o.province || "",
+      o.id, o.customer_name, o.phone, o.branch || "",
+      o.province || "",
       (o.address || "").replace(/\n/g, " "),
       o.product_name, o.price, o.transfer_time || "", o.slip_id || ""
     ]);
@@ -296,13 +305,20 @@ function OrdersTab() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
-        <span className="text-sm text-gray-500">ทั้งหมด {orders.length} ออเดอร์</span>
-        <button onClick={exportCSV}
-          className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold">📥 Export CSV</button>
+      <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
+        <span className="text-sm text-gray-500">แสดง {filtered.length} / {orders.length} ออเดอร์</span>
+        <div className="flex gap-2 items-center">
+          <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)}
+            className="border rounded px-2 py-1 text-sm">
+            <option value="">ทุกสาขา</option>
+            {branchList.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+          <button onClick={exportCSV}
+            className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold">📥 Export CSV</button>
+        </div>
       </div>
       <div className="grid gap-2">
-        {orders.map(o => (
+        {filtered.map(o => (
           <div key={o.id} className="bg-white p-3 rounded-xl shadow">
             <div className="flex justify-between text-xs text-gray-500">
               <span>#{o.id.slice(0, 8)}</span>
@@ -313,6 +329,9 @@ function OrdersTab() {
               ลูกค้า: <b>{o.customer_name}</b> · โทร: <a className="text-blue-500" href={`tel:${o.phone}`}>{o.phone}</a>
               {o.province && <> · <span className="text-purple-600">{o.province}</span></>}
             </div>
+            {o.branch && (
+              <div className="text-sm mt-1">🏬 <b className="text-emerald-700">{o.branch}</b></div>
+            )}
             {o.address && (
               <div className="mt-2 bg-gray-50 p-2 rounded flex justify-between items-start gap-2">
                 <div className="text-xs text-gray-700 whitespace-pre-wrap flex-1">📦 {o.address}</div>
@@ -338,7 +357,7 @@ function OrdersTab() {
             </div>
           </div>
         ))}
-        {orders.length === 0 && <div className="text-center text-gray-500 py-8">ยังไม่มีออเดอร์</div>}
+        {filtered.length === 0 && <div className="text-center text-gray-500 py-8">ยังไม่มีออเดอร์</div>}
       </div>
       {viewSlip && (
         <div onClick={() => setViewSlip(null)}
