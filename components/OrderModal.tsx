@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Product, THAI_PROVINCES } from "@/lib/types";
+import { Product, THAI_PROVINCES, BRANCHES } from "@/lib/types";
 
 export default function OrderModal({
   product, onClose
@@ -10,6 +10,7 @@ export default function OrderModal({
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [province, setProvince] = useState("");
+  const [branch, setBranch] = useState("");
   const [transferTime, setTransferTime] = useState("");
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,7 +39,7 @@ export default function OrderModal({
         product_name: product!.name,
         price: product!.price,
         customer_name: name,
-        phone, address, province,
+        phone, address, province, branch,
         transfer_time: transferTime,
         slip_url: slipData.url,
         slip_id: slipData.id
@@ -57,6 +58,8 @@ export default function OrderModal({
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     setZoom({ show: true, x, y });
   }
+
+  const regions = ["R1","R2","R3","R4"];
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -158,6 +161,20 @@ export default function OrderModal({
               <input required value={phone} onChange={e=>setPhone(e.target.value)}
                 pattern="[0-9]{9,10}" inputMode="numeric"
                 className="w-full border rounded-lg p-2 mt-1" placeholder="0XXXXXXXXX"/>
+            </div>
+            <div>
+              <label className="text-sm text-gray-700">สาขาที่สั่งซื้อ <span className="text-red-500">*</span></label>
+              <select required value={branch} onChange={e=>setBranch(e.target.value)}
+                className="w-full border rounded-lg p-2 mt-1">
+                <option value="">-- เลือกสาขา --</option>
+                {regions.map(r => (
+                  <optgroup key={r} label={r}>
+                    {BRANCHES.filter(b => b.region===r).map(b => (
+                      <option key={b.name} value={b.name}>{b.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-sm text-gray-700">จังหวัด <span className="text-red-500">*</span></label>
