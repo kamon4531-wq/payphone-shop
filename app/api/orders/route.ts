@@ -7,7 +7,21 @@ export async function POST(req: NextRequest) {
   if (!body.product_id || !body.customer_name || !body.phone) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
   }
-  const { data, error } = await supabaseAdmin().from("orders").insert({
+
+  const admin = supabaseAdmin();
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1).toISOString();
+
+  const { count } = await admin.from("orders")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", startOfDay)
+    .lt("created_at", endOfDay);
+
+  const orderNumber = `ORD-${dateStr}-${String((count || 0) + 1).padStart(4, '0')}`;
+
+  const { data, error } = await admin.from("orders").insert({
     product_id: body.product_id,
     product_name: body.product_name,
     customer_name: body.customer_name,
@@ -18,7 +32,8 @@ export async function POST(req: NextRequest) {
     price: body.price,
     slip_url: body.slip_url || null,
     slip_id: body.slip_id || null,
-    transfer_time: body.transfer_time || null
+    transfer_time: body.transfer_time || null,
+    order_number: orderNumber
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ order: data });
