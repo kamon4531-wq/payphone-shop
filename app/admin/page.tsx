@@ -37,9 +37,10 @@ function Dashboard() {
   const [tab, setTab] = useState<"products" | "orders">("products");
   return (
     <div className="max-w-6xl mx-auto p-4">
-      <header className="flex items-center justify-between mb-4">
+      <header className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <h1 className="text-xl font-bold">Admin Dashboard</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-3 items-center">
+          <a href="/admin/qr" className="text-sm text-blue-600 hover:underline">📱 QR สาขา</a>
           <a href="/" className="text-sm text-gray-600 hover:underline">← หน้าร้าน</a>
           <button onClick={async () => { await fetch("/api/admin/logout", { method: "POST" }); location.reload(); }}
             className="text-sm text-red-500">ออกจากระบบ</button>
