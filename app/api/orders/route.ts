@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
     phone: body.phone,
     address: body.address || null,
     province: body.province || null,
+    branch: body.branch || null,
     price: body.price,
     slip_url: body.slip_url || null,
     slip_id: body.slip_id || null,
