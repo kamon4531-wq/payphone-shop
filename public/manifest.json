@@ -1,0 +1,24 @@
+{
+  "name": "PAY BY PA.PHONE",
+  "short_name": "PA.PHONE",
+  "description": "แหล่งรวมอุปกรณ์มือถือที่ดีที่สุด",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10b981",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
