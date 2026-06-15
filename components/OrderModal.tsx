@@ -73,8 +73,6 @@ export default function OrderModal({
     setZoom({ show: true, x, y });
   }
 
-  const regions = ["R1","R2","R3","R4"];
-
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
@@ -179,18 +177,14 @@ export default function OrderModal({
             </div>
             <div>
               <label className="text-sm text-gray-700">สาขาที่สั่งซื้อ <span className="text-red-500">*</span></label>
-              <select required value={branch} onChange={e=>setBranch(e.target.value)}
-                className="w-full border rounded-lg p-2 mt-1">
-                <option value="">-- เลือกสาขา --</option>
-                {regions.map(r => (
-                  <optgroup key={r} label={r}>
-                    {BRANCHES.filter(b => b.region===r).map(b => (
-                      <option key={b.name} value={b.name}>{b.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              {branch && <div className="text-xs text-emerald-600 mt-1">✓ สาขาถูกเลือกจาก QR ที่สแกน</div>}
+              <input required type="text" list="branchList" value={branch}
+                onChange={e=>setBranch(e.target.value)}
+                className="w-full border rounded-lg p-2 mt-1"
+                placeholder="พิมพ์ค้นหา เช่น ปราจีน, ขอนแก่น..."/>
+              <datalist id="branchList">
+                {BRANCHES.map(b => <option key={b.name} value={b.name}/>)}
+              </datalist>
+              {branch && <div className="text-xs text-emerald-600 mt-1">✓ {branch}</div>}
             </div>
             <div>
               <label className="text-sm text-gray-700">จังหวัด <span className="text-red-500">*</span></label>
