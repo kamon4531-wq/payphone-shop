@@ -14,7 +14,7 @@ function optImg(url: string, w: number) {
 export default function OrderModal({
   product, onClose
 }: { product: Product | null; onClose: () => void }) {
-  const { t } = useLang();
+  const { t, provName } = useLang();
   const [step, setStep] = useState<"detail"|"info"|"pay"|"done">("detail");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -190,7 +190,7 @@ export default function OrderModal({
               <select required value={province} onChange={e=>setProvince(e.target.value)}
                 className="w-full border rounded-lg p-2 mt-1">
                 <option value="">{t("selectProvince")}</option>
-                {THAI_PROVINCES.map(p=> <option key={p} value={p}>{p}</option>)}
+                {THAI_PROVINCES.map(p=> <option key={p} value={p}>{provName(p)}</option>)}
               </select>
             </div>
             <div>
