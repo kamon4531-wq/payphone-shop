@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Product, THAI_PROVINCES, BRANCHES } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
 
 function optImg(url: string, w: number) {
   if (!url) return "";
@@ -13,6 +14,7 @@ function optImg(url: string, w: number) {
 export default function OrderModal({
   product, onClose
 }: { product: Product | null; onClose: () => void }) {
+  const { t } = useLang();
   const [step, setStep] = useState<"detail"|"info"|"pay"|"done">("detail");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -38,11 +40,11 @@ export default function OrderModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!slipFile) { alert("กรุณาอัพโหลดสลิป"); return; }
+    if (!slipFile) { alert(t("uploadSlip")); return; }
     setLoading(true);
     const fd = new FormData(); fd.append("file", slipFile);
     const up = await fetch("/api/upload", { method: "POST", body: fd });
-    if (!up.ok) { alert("อัพโหลดสลิปล้มเหลว"); setLoading(false); return; }
+    if (!up.ok) { alert("Upload failed"); setLoading(false); return; }
     const slipData = await up.json();
 
     const r = await fetch("/api/orders", {
@@ -60,7 +62,7 @@ export default function OrderModal({
       })
     });
     setLoading(false);
-    if (r.ok) setStep("done"); else alert("เกิดข้อผิดพลาด");
+    if (r.ok) setStep("done"); else alert("Error");
   }
 
   const discount = product.old_price && product.old_price > product.price
@@ -78,10 +80,10 @@ export default function OrderModal({
       <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
         <div className="p-4 border-b flex justify-between items-center">
           <h3 className="font-bold">
-            {step==="detail" && "รายละเอียดสินค้า"}
-            {step==="info" && "ข้อมูลผู้สั่งซื้อ"}
-            {step==="pay" && "ชำระเงิน"}
-            {step==="done" && "สั่งซื้อสำเร็จ"}
+            {step==="detail" && t("productDetails")}
+            {step==="info" && t("buyerInfo")}
+            {step==="pay" && t("payment")}
+            {step==="done" && t("orderSuccess")}
           </h3>
           <button onClick={onClose} className="text-gray-500 hover:text-black text-xl">✕</button>
         </div>
@@ -89,9 +91,9 @@ export default function OrderModal({
         {step==="done" && (
           <div className="p-6 text-center">
             <div className="text-5xl mb-3">✅</div>
-            <p className="font-semibold">ขอบคุณสำหรับการสั่งซื้อ!</p>
-            <p className="text-sm text-gray-600 mt-2">ทางร้านจะตรวจสอบสลิปและติดต่อกลับ</p>
-            <button onClick={onClose} className="mt-4 bg-emerald-500 text-white px-6 py-2 rounded-lg">ปิด</button>
+            <p className="font-semibold">{t("thankYou")}</p>
+            <p className="text-sm text-gray-600 mt-2">{t("willContact")}</p>
+            <button onClick={onClose} className="mt-4 bg-emerald-500 text-white px-6 py-2 rounded-lg">{t("close")}</button>
           </div>
         )}
 
@@ -144,19 +146,16 @@ export default function OrderModal({
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-emerald-600">฿{product.price.toLocaleString()}</span>
                 {product.old_price && <span className="text-sm text-gray-400 line-through">฿{product.old_price.toLocaleString()}</span>}
-                {discount>0 && badge && (
-                  <span className="text-xs text-orange-500 font-bold">ลด {discount}%</span>
-                )}
               </div>
               {product.description && (
                 <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="text-sm font-semibold mb-1">รายละเอียดสินค้า</div>
+                  <div className="text-sm font-semibold mb-1">{t("description")}</div>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{product.description}</p>
                 </div>
               )}
               <button onClick={()=>setStep("info")}
                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg">
-                สั่งซื้อสินค้านี้
+                {t("orderProduct")}
               </button>
             </div>
           </div>
@@ -165,46 +164,46 @@ export default function OrderModal({
         {step==="info" && (
           <form onSubmit={e=>{e.preventDefault(); setStep("pay");}} className="p-4 space-y-3 overflow-y-auto">
             <div>
-              <label className="text-sm text-gray-700">ชื่อ-นามสกุล <span className="text-red-500">*</span></label>
+              <label className="text-sm text-gray-700">{t("fullName")} <span className="text-red-500">*</span></label>
               <input required value={name} onChange={e=>setName(e.target.value)}
-                className="w-full border rounded-lg p-2 mt-1" placeholder="กรอกชื่อ"/>
+                className="w-full border rounded-lg p-2 mt-1"/>
             </div>
             <div>
-              <label className="text-sm text-gray-700">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
+              <label className="text-sm text-gray-700">{t("phone")} <span className="text-red-500">*</span></label>
               <input required value={phone} onChange={e=>setPhone(e.target.value)}
                 pattern="[0-9]{9,10}" inputMode="numeric"
                 className="w-full border rounded-lg p-2 mt-1" placeholder="0XXXXXXXXX"/>
             </div>
             <div>
-              <label className="text-sm text-gray-700">สาขาที่สั่งซื้อ <span className="text-red-500">*</span></label>
+              <label className="text-sm text-gray-700">{t("branch")} <span className="text-red-500">*</span></label>
               <input required type="text" list="branchList" value={branch}
                 onChange={e=>setBranch(e.target.value)}
                 className="w-full border rounded-lg p-2 mt-1"
-                placeholder="พิมพ์ค้นหา เช่น ปราจีน, ขอนแก่น..."/>
+                placeholder={t("searchBranch")}/>
               <datalist id="branchList">
                 {BRANCHES.map(b => <option key={b.name} value={b.name}/>)}
               </datalist>
               {branch && <div className="text-xs text-emerald-600 mt-1">✓ {branch}</div>}
             </div>
             <div>
-              <label className="text-sm text-gray-700">จังหวัด <span className="text-red-500">*</span></label>
+              <label className="text-sm text-gray-700">{t("province")} <span className="text-red-500">*</span></label>
               <select required value={province} onChange={e=>setProvince(e.target.value)}
                 className="w-full border rounded-lg p-2 mt-1">
-                <option value="">-- เลือกจังหวัด --</option>
+                <option value="">{t("selectProvince")}</option>
                 {THAI_PROVINCES.map(p=> <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-sm text-gray-700">ที่อยู่จัดส่ง <span className="text-red-500">*</span></label>
+              <label className="text-sm text-gray-700">{t("address")} <span className="text-red-500">*</span></label>
               <textarea required value={address} onChange={e=>setAddress(e.target.value)} rows={4}
                 className="w-full border rounded-lg p-2 mt-1 resize-y"
-                placeholder="บ้านเลขที่ ซอย ถนน แขวง/ตำบล เขต/อำเภอ รหัสไปรษณีย์"/>
+                placeholder={t("addressPlaceholder")}/>
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={()=>setStep("detail")}
-                className="flex-1 bg-gray-200 py-3 rounded-lg">← ย้อนกลับ</button>
+                className="flex-1 bg-gray-200 py-3 rounded-lg">{t("back")}</button>
               <button className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg">
-                ดำเนินการชำระเงิน →
+                {t("proceedPayment")}
               </button>
             </div>
           </form>
@@ -213,24 +212,24 @@ export default function OrderModal({
         {step==="pay" && (
           <form onSubmit={submit} className="p-4 space-y-3 overflow-y-auto">
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
-              <div className="text-xs text-gray-600">ยอดที่ต้องโอน</div>
+              <div className="text-xs text-gray-600">{t("amountToTransfer")}</div>
               <div className="text-2xl font-bold text-emerald-600">฿{product.price.toLocaleString()}</div>
             </div>
             <div className="bg-gray-50 p-3 rounded-lg text-center">
-              <div className="text-sm font-semibold mb-2">สแกน QR เพื่อชำระเงิน</div>
+              <div className="text-sm font-semibold mb-2">{t("scanQR")}</div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/qr.jpg" alt="QR PromptPay" className="mx-auto max-w-[220px] w-full"
+              <img src="/qr.jpg" alt="QR" className="mx-auto max-w-[220px] w-full"
                 onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}}/>
               <div className="text-xs text-gray-500 mt-2">PromptPay</div>
             </div>
             <div>
-              <label className="text-sm text-gray-700">เวลาที่โอน <span className="text-red-500">*</span></label>
+              <label className="text-sm text-gray-700">{t("transferTime")} <span className="text-red-500">*</span></label>
               <input required type="datetime-local" value={transferTime}
                 onChange={e=>setTransferTime(e.target.value)}
                 className="w-full border rounded-lg p-2 mt-1"/>
             </div>
             <div>
-              <label className="text-sm text-gray-700">อัพโหลดสลิป <span className="text-red-500">*</span></label>
+              <label className="text-sm text-gray-700">{t("uploadSlip")} <span className="text-red-500">*</span></label>
               <input required type="file" accept="image/*"
                 onChange={e=>setSlipFile(e.target.files?.[0] || null)}
                 className="w-full border rounded-lg p-2 mt-1"/>
@@ -238,10 +237,10 @@ export default function OrderModal({
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={()=>setStep("info")}
-                className="flex-1 bg-gray-200 py-3 rounded-lg">← ย้อนกลับ</button>
+                className="flex-1 bg-gray-200 py-3 rounded-lg">{t("back")}</button>
               <button disabled={loading}
                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-semibold py-3 rounded-lg">
-                {loading ? "กำลังส่ง..." : "ยืนยันสั่งซื้อ"}
+                {loading ? t("sending") : t("confirmOrder")}
               </button>
             </div>
           </form>
