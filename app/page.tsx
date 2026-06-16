@@ -4,9 +4,12 @@ import Banner from "@/components/Banner";
 import ProductCard from "@/components/ProductCard";
 import CategoryFilter from "@/components/CategoryFilter";
 import OrderModal from "@/components/OrderModal";
+import LangSwitch from "@/components/LangSwitch";
+import { useLang } from "@/lib/i18n";
 import { Product } from "@/lib/types";
 
 export default function Home() {
+  const { t } = useLang();
   const [products, setProducts] = useState<Product[]>([]);
   const [cat, setCat] = useState("all");
   const [q, setQ] = useState("");
@@ -24,32 +27,33 @@ export default function Home() {
   return (
     <main className="max-w-6xl mx-auto px-4 py-4">
       <div className="bg-gray-50 text-xs text-gray-600 text-center py-2 mb-3 rounded">
-        ยินดีต้อนรับสู่ PAY BY PA.PHONE แหล่งรวมอุปกรณ์มือถือที่ดีที่สุด
+        {t("welcome")}
       </div>
       <header className="flex items-center gap-3 mb-4">
         <div className="bg-emerald-400 px-3 py-2 rounded-lg font-bold text-sm">PAY BY PA.PHONE</div>
         <div className="flex-1 relative">
           <input
             value={q} onChange={e => setQ(e.target.value)}
-            placeholder="ค้นหา เคส, สายชาร์จ, พาวเวอร์แบงค์ หรือหัวชาร์จเร็ว..."
+            placeholder={t("search")}
             className="w-full border rounded-full px-4 py-2 pl-10 text-sm"
           />
           <span className="absolute left-3 top-1/2 -translate-y-1/2">🔍</span>
         </div>
-        <a href="/admin" className="text-xs text-gray-500 hover:text-black">เข้าสู่ระบบ</a>
+        <LangSwitch/>
+        <a href="/admin" className="text-xs text-gray-500 hover:text-black">{t("login")}</a>
       </header>
 
       <Banner />
 
       <section className="mt-6">
-        <h2 className="font-semibold mb-3">หมวดหมู่ยอดนิยม</h2>
+        <h2 className="font-semibold mb-3">{t("categories")}</h2>
         <CategoryFilter selected={cat} onSelect={setCat} />
       </section>
 
       <section className="mt-6">
-        <h2 className="font-semibold mb-3">สินค้าแนะนำสำหรับคุณ</h2>
+        <h2 className="font-semibold mb-3">{t("recommended")}</h2>
         {filtered.length === 0 ? (
-          <div className="text-center text-gray-500 py-12">ยังไม่มีสินค้าในหมวดนี้</div>
+          <div className="text-center text-gray-500 py-12">{t("noProducts")}</div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {filtered.map(p => (
