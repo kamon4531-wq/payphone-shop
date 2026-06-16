@@ -1,9 +1,11 @@
 "use client";
 import { CATEGORIES } from "@/lib/types";
+import { useLang } from "@/lib/i18n";
 
 export default function CategoryFilter({
   selected, onSelect
 }: { selected: string; onSelect: (id: string) => void }) {
+  const { catName } = useLang();
   return (
     <div className="flex gap-2 overflow-x-auto pb-2">
       {CATEGORIES.map(c => (
@@ -16,7 +18,7 @@ export default function CategoryFilter({
               : "bg-white border-gray-200 text-gray-700 hover:border-emerald-300"
           }`}
         >
-          {c.name}
+          {catName(c.id)}
         </button>
       ))}
     </div>
