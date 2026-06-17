@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Product, THAI_PROVINCES, BRANCHES } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 
@@ -21,6 +21,8 @@ export default function OrderModal({
   const [address, setAddress] = useState("");
   const [province, setProvince] = useState("");
   const [branch, setBranch] = useState("");
+  const [branchSearch, setBranchSearch] = useState("");
+  const [branchOpen, setBranchOpen] = useState(false);
   const [transferTime, setTransferTime] = useState("");
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,8 +31,14 @@ export default function OrderModal({
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("selectedBranch") : null;
-    if (saved) setBranch(saved);
+    if (saved) { setBranch(saved); setBranchSearch(saved); }
   }, []);
+
+  const filteredBranches = useMemo(() => {
+    if (!branchSearch) return BRANCHES.slice(0, 10);
+    const q = branchSearch.toLowerCase();
+    return BRANCHES.filter(b => b.name.toLowerCase().includes(q)).slice(0, 20);
+  }, [branchSearch]);
 
   if (!product) return null;
 
@@ -41,6 +49,7 @@ export default function OrderModal({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!slipFile) { alert(t("uploadSlip")); return; }
+    if (!branch) { alert("Please select branch"); return; }
     setLoading(true);
     const fd = new FormData(); fd.append("file", slipFile);
     const up = await fetch("/api/upload", { method: "POST", body: fd });
@@ -73,6 +82,12 @@ export default function OrderModal({
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     setZoom({ show: true, x, y });
+  }
+
+  function selectBranch(name: string) {
+    setBranch(name);
+    setBranchSearch(name);
+    setBranchOpen(false);
   }
 
   return (
@@ -162,7 +177,7 @@ export default function OrderModal({
         )}
 
         {step==="info" && (
-          <form onSubmit={e=>{e.preventDefault(); setStep("pay");}} className="p-4 space-y-3 overflow-y-auto">
+          <form onSubmit={e=>{e.preventDefault(); if(!branch){alert("Please select branch"); return;} setStep("pay");}} className="p-4 space-y-3 overflow-y-auto">
             <div>
               <label className="text-sm text-gray-700">{t("fullName")} <span className="text-red-500">*</span></label>
               <input required value={name} onChange={e=>setName(e.target.value)}
@@ -174,15 +189,24 @@ export default function OrderModal({
                 pattern="[0-9]{9,10}" inputMode="numeric"
                 className="w-full border rounded-lg p-2 mt-1" placeholder="0XXXXXXXXX"/>
             </div>
-            <div>
+            <div className="relative">
               <label className="text-sm text-gray-700">{t("branch")} <span className="text-red-500">*</span></label>
-              <input required type="text" list="branchList" value={branch}
-                onChange={e=>setBranch(e.target.value)}
+              <input type="text" value={branchSearch}
+                onChange={e => { setBranchSearch(e.target.value); setBranch(""); setBranchOpen(true); }}
+                onFocus={() => setBranchOpen(true)}
                 className="w-full border rounded-lg p-2 mt-1"
                 placeholder={t("searchBranch")}/>
-              <datalist id="branchList">
-                {BRANCHES.map(b => <option key={b.name} value={b.name}/>)}
-              </datalist>
+              {branchOpen && filteredBranches.length > 0 && (
+                <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border rounded-lg shadow-lg z-20">
+                  {filteredBranches.map(b => (
+                    <div key={b.name}
+                      onClick={() => selectBranch(b.name)}
+                      className="p-2 text-sm hover:bg-emerald-50 cursor-pointer border-b">
+                      <span className="text-xs text-gray-500 mr-2">{b.region}</span>{b.name}
+                    </div>
+                  ))}
+                </div>
+              )}
               {branch && <div className="text-xs text-emerald-600 mt-1">✓ {branch}</div>}
             </div>
             <div>
