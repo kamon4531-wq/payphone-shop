@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { Product } from "@/lib/types";
 
 function optImg(url: string, w: number) {
@@ -15,11 +16,14 @@ export default function ProductCard({ p, onBuy }: { p: Product; onBuy: (p: Produ
     : 0;
   const badge = p.badge_text && p.badge_text !== "null" ? p.badge_text : null;
 
+  const images = [p.image_url, p.image_url2, p.image_url3].filter(Boolean) as string[];
+  const [mainImg, setMainImg] = useState(images[0]);
+
   return (
     <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
       <div className="relative bg-gray-100 aspect-square">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={optImg(p.image_url, 400)} alt={p.name}
+        <img src={optImg(mainImg, 400)} alt={p.name}
           loading="lazy"
           className="w-full h-full object-contain p-4" />
         {badge && (
@@ -33,6 +37,19 @@ export default function ProductCard({ p, onBuy }: { p: Product; onBuy: (p: Produ
           </span>
         )}
       </div>
+
+      {images.length > 1 && (
+        <div className="flex gap-1 px-3 pt-2 justify-center">
+          {images.map((img, idx) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={idx} src={optImg(img, 80)} alt={`${idx+1}`}
+              loading="lazy"
+              onClick={() => setMainImg(img)}
+              className={`w-10 h-10 object-contain border-2 rounded cursor-pointer bg-gray-50 ${mainImg===img?"border-emerald-500":"border-gray-200"}`}/>
+          ))}
+        </div>
+      )}
+
       <div className="p-3 flex flex-col flex-1">
         <h3 className="text-sm font-medium line-clamp-2 min-h-[2.5rem]">{p.name}</h3>
         <div className="mt-2 flex items-baseline gap-2">
