@@ -29,9 +29,9 @@ export default function Home() {
       <div className="bg-gray-50 text-xs text-gray-600 text-center py-2 mb-3 rounded">
         {t("welcome")}
       </div>
-      <header className="flex items-center gap-3 mb-4">
+      <header className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="bg-emerald-400 px-3 py-2 rounded-lg font-bold text-sm">PAY BY PA.PHONE</div>
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-[200px]">
           <input
             value={q} onChange={e => setQ(e.target.value)}
             placeholder={t("search")}
@@ -40,6 +40,7 @@ export default function Home() {
           <span className="absolute left-3 top-1/2 -translate-y-1/2">🔍</span>
         </div>
         <LangSwitch/>
+        <a href="/track" className="text-xs text-emerald-600 hover:underline whitespace-nowrap">📦 ออเดอร์ของฉัน</a>
         <a href="/admin" className="text-xs text-gray-500 hover:text-black">{t("login")}</a>
       </header>
 
