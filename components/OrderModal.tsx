@@ -35,9 +35,9 @@ export default function OrderModal({
   }, []);
 
   const filteredBranches = useMemo(() => {
-    if (!branchSearch) return BRANCHES.slice(0, 10);
+    if (!branchSearch) return BRANCHES;
     const q = branchSearch.toLowerCase();
-    return BRANCHES.filter(b => b.name.toLowerCase().includes(q)).slice(0, 20);
+    return BRANCHES.filter(b => b.name.toLowerCase().includes(q));
   }, [branchSearch]);
 
   if (!product) return null;
@@ -49,7 +49,7 @@ export default function OrderModal({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!slipFile) { alert(t("uploadSlip")); return; }
-    if (!branch) { alert("Please select branch"); return; }
+    if (!branch) { alert("กรุณาเลือกสาขา"); return; }
     setLoading(true);
     const fd = new FormData(); fd.append("file", slipFile);
     const up = await fetch("/api/upload", { method: "POST", body: fd });
@@ -84,9 +84,9 @@ export default function OrderModal({
     setZoom({ show: true, x, y });
   }
 
-  function selectBranch(name: string) {
-    setBranch(name);
-    setBranchSearch(name);
+  function selectBranch(n: string) {
+    setBranch(n);
+    setBranchSearch(n);
     setBranchOpen(false);
   }
 
@@ -177,7 +177,7 @@ export default function OrderModal({
         )}
 
         {step==="info" && (
-          <form onSubmit={e=>{e.preventDefault(); if(!branch){alert("Please select branch"); return;} setStep("pay");}} className="p-4 space-y-3 overflow-y-auto">
+          <form onSubmit={e=>{e.preventDefault(); if(!branch){alert("กรุณาเลือกสาขา"); return;} setStep("pay");}} className="p-4 space-y-3 overflow-y-auto">
             <div>
               <label className="text-sm text-gray-700">{t("fullName")} <span className="text-red-500">*</span></label>
               <input required value={name} onChange={e=>setName(e.target.value)}
@@ -194,17 +194,20 @@ export default function OrderModal({
               <input type="text" value={branchSearch}
                 onChange={e => { setBranchSearch(e.target.value); setBranch(""); setBranchOpen(true); }}
                 onFocus={() => setBranchOpen(true)}
+                onBlur={() => setTimeout(() => setBranchOpen(false), 200)}
                 className="w-full border rounded-lg p-2 mt-1"
                 placeholder={t("searchBranch")}/>
-              {branchOpen && filteredBranches.length > 0 && (
-                <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border rounded-lg shadow-lg z-20">
-                  {filteredBranches.map(b => (
+              {branchOpen && (
+                <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border rounded-lg shadow-lg z-20">
+                  {filteredBranches.length > 0 ? filteredBranches.map(b => (
                     <div key={b.name}
-                      onClick={() => selectBranch(b.name)}
+                      onMouseDown={() => selectBranch(b.name)}
                       className="p-2 text-sm hover:bg-emerald-50 cursor-pointer border-b">
                       <span className="text-xs text-gray-500 mr-2">{b.region}</span>{b.name}
                     </div>
-                  ))}
+                  )) : (
+                    <div className="p-3 text-sm text-gray-500 text-center">ไม่พบสาขา</div>
+                  )}
                 </div>
               )}
               {branch && <div className="text-xs text-emerald-600 mt-1">✓ {branch}</div>}
