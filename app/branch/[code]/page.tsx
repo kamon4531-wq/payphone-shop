@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { BRANCHES } from "@/lib/types";
 
-const LINE_OA_ID = "@050hfvcn";
+const FALLBACK_LINE_OA = "@050hfvcn";
 
 export default function BranchPage() {
   const params = useParams();
@@ -30,7 +30,8 @@ export default function BranchPage() {
   }
 
   const registerUrl = `http://183.88.225.82:81/PAMember/register/${code}`;
-  const lineUrl = `https://line.me/R/ti/p/${LINE_OA_ID}`;
+  const lineOaId = branch.line_oa_id || FALLBACK_LINE_OA;
+  const lineUrl = `https://line.me/R/ti/p/${lineOaId}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4">
@@ -50,7 +51,7 @@ export default function BranchPage() {
 
         <a href={lineUrl} target="_blank" rel="noreferrer"
           className="block w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg mb-3 shadow">
-          ➕ เพิ่มเพื่อน Line OA
+          ➕ เพิ่มเพื่อน Line OA สาขา
         </a>
 
         <a href="/" className="block w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg mb-3 shadow">
