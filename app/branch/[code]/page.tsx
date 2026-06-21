@@ -29,7 +29,7 @@ export default function BranchPage() {
     );
   }
 
-  const registerUrl = `http://183.88.225.82:81/PAMember/register/${code}`;
+  const registerUrl = `/go/register/${code}`;
   const lineOaId = branch.line_oa_id || FALLBACK_LINE_OA;
   const lineUrl = `https://line.me/R/ti/p/${lineOaId}`;
 
