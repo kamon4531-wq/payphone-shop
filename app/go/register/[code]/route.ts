@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 export async function GET(req: NextRequest, { params }: { params: { code: string } }) {
   const code = params.code.toUpperCase();
   
-  await supabaseAdmin.from("register_clicks").insert({
+  await supabaseAdmin().from("register_clicks").insert({
     branch_code: code,
     ip: req.headers.get("x-forwarded-for") || "unknown",
     user_agent: req.headers.get("user-agent") || "unknown"
