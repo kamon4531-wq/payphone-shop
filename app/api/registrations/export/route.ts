@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const days = parseInt(req.nextUrl.searchParams.get("days") || "30");
   const since = new Date(Date.now() - days * 86400000).toISOString();
   
-  const { data } = await supabaseAdmin
+  const { data } = await supabaseAdmin()
     .from("register_clicks")
     .select("*")
     .gte("clicked_at", since)
