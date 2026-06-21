@@ -95,7 +95,7 @@ export const BRANCHES: { region: string; name: string; line_oa_id: string | null
   { region: "R3", name: "B13:PA เซ็นทรัล พัทยาบีช", line_oa_id: "@494qgjuo" },
   { region: "R3", name: "B34:PA โรบินสัน ฉะเชิงเทรา", line_oa_id: "@902ztdxe" },
   { region: "R3", name: "B35:PA แพชชั่น ระยอง 2", line_oa_id: "@632fvalb" },
-  { region: "R3", name: "B36:PA โรบินสัน สมุทรปราการ", line_oa_id: "@906kbmmf" },
+  { region: "R3", name: "B36:PA โรบินสัน สมุทรปราการ", line_oa_id: "@305lhidt" },
   { region: "R3", name: "B37:PA โรบินสัน ปราจีนบุรี", line_oa_id: "@119cvgkb" },
   { region: "R3", name: "B40:PA เซ็นทรัล ระยอง", line_oa_id: "@768bziev" },
   { region: "R3", name: "B55:PA โรบินสัน จันทบุรี", line_oa_id: "@550rlybo" },
