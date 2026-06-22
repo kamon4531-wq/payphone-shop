@@ -3,8 +3,6 @@ import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { BRANCHES } from "@/lib/types";
 
-const FALLBACK_LINE_OA = "@050hfvcn";
-
 export default function BranchPage() {
   const params = useParams();
   const code = params.code as string;
@@ -30,8 +28,7 @@ export default function BranchPage() {
   }
 
   const registerUrl = `/go/register/${code}`;
-  const lineOaId = branch.line_oa_id || FALLBACK_LINE_OA;
-  const lineUrl = `https://line.me/R/ti/p/${lineOaId}`;
+  const lineUrl = `/go/line/${code}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4">
