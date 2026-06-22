@@ -7,6 +7,7 @@ export default function RegistrationsPage() {
   const [days, setDays] = useState(30);
   const [region, setRegion] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [hideZero, setHideZero] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -16,18 +17,29 @@ export default function RegistrationsPage() {
       .catch(() => setLoading(false));
   }, [days]);
 
-  const branchRegion: Record<string, string> = {};
-  BRANCHES.forEach(b => {
+  const dataMap: Record<string, any> = {};
+  data.forEach(r => { dataMap[r.branch_code] = r; });
+
+  // รวมทุกสาขาในระบบ + รวมข้อมูล
+  const allRows = BRANCHES.map(b => {
     const code = b.name.split(":")[0];
-    branchRegion[code] = b.region;
+    const r = dataMap[code] || { register: 0, line: 0, count: 0 };
+    return {
+      branch_code: code,
+      branch_name: b.name.split(":")[1] || b.name,
+      region: b.region,
+      register: r.register || 0,
+      line: r.line || 0,
+      count: r.count || 0
+    };
   });
 
-  const filtered = region === "all" 
-    ? data 
-    : data.filter(r => branchRegion[r.branch_code] === region);
-  
-  const totalReg = filtered.reduce((s, r) => s + (r.register || 0), 0);
-  const totalLine = filtered.reduce((s, r) => s + (r.line || 0), 0);
+  let filtered = region === "all" ? allRows : allRows.filter(r => r.region === region);
+  if (hideZero) filtered = filtered.filter(r => r.count > 0);
+  filtered.sort((a, b) => b.count - a.count);
+
+  const totalReg = filtered.reduce((s, r) => s + r.register, 0);
+  const totalLine = filtered.reduce((s, r) => s + r.line, 0);
   const totalAll = totalReg + totalLine;
 
   return (
@@ -47,7 +59,7 @@ export default function RegistrationsPage() {
         ))}
       </div>
 
-      <div className="flex gap-2 mb-4 overflow-x-auto">
+      <div className="flex gap-2 mb-3 overflow-x-auto">
         {["all", "R1", "R2", "R3", "R4"].map(r => (
           <button key={r} onClick={() => setRegion(r)}
             className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold ${
@@ -56,6 +68,11 @@ export default function RegistrationsPage() {
           >{r === "all" ? "ทั้งประเทศ" : `ภาค ${r}`}</button>
         ))}
       </div>
+
+      <label className="flex items-center gap-2 mb-4 text-sm">
+        <input type="checkbox" checked={hideZero} onChange={e => setHideZero(e.target.checked)}/>
+        ซ่อนสาขาที่ยังไม่มีคลิก
+      </label>
 
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="bg-blue-50 p-3 rounded-lg">
@@ -88,20 +105,18 @@ export default function RegistrationsPage() {
             </thead>
             <tbody>
               {filtered.map(r => (
-                <tr key={r.branch_code} className="border-t hover:bg-gray-50">
+                <tr key={r.branch_code} className={`border-t ${r.count === 0 ? "text-gray-400" : "hover:bg-gray-50"}`}>
                   <td className="p-3 font-mono font-semibold">{r.branch_code}</td>
                   <td className="p-3 text-xs">
-                    <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
-                      {branchRegion[r.branch_code] || "?"}
-                    </span>
+                    <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">{r.region}</span>
                   </td>
-                  <td className="p-3 text-right text-blue-600">{r.register || 0}</td>
-                  <td className="p-3 text-right text-green-600">{r.line || 0}</td>
-                  <td className="p-3 text-right font-semibold">{r.count || 0}</td>
+                  <td className="p-3 text-right">{r.register}</td>
+                  <td className="p-3 text-right">{r.line}</td>
+                  <td className="p-3 text-right font-semibold">{r.count}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="p-8 text-center text-gray-400">ยังไม่มีข้อมูล</td></tr>
+                <tr><td colSpan={5} className="p-8 text-center text-gray-400">ไม่มีสาขา</td></tr>
               )}
             </tbody>
           </table>
