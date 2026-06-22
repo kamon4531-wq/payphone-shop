@@ -26,12 +26,14 @@ export default function RegistrationsPage() {
     ? data 
     : data.filter(r => branchRegion[r.branch_code] === region);
   
-  const total = filtered.reduce((s, r) => s + r.count, 0);
+  const totalReg = filtered.reduce((s, r) => s + (r.register || 0), 0);
+  const totalLine = filtered.reduce((s, r) => s + (r.line || 0), 0);
+  const totalAll = totalReg + totalLine;
 
   return (
     <main className="max-w-4xl mx-auto p-4">
       <header className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold">📊 สถิติคลิกสมัครสมาชิก</h1>
+        <h1 className="text-xl font-bold">📊 สถิติคลิกสมาชิก & Line OA</h1>
         <a href="/admin" className="text-sm text-emerald-600 hover:underline">← Admin</a>
       </header>
 
@@ -55,23 +57,33 @@ export default function RegistrationsPage() {
         ))}
       </div>
 
-      <div className="bg-emerald-50 p-4 rounded-lg mb-4">
-        <div className="text-sm text-gray-600">รวมคลิก {region === "all" ? "ทั่วประเทศ" : `ภาค ${region}`}</div>
-        <div className="text-3xl font-bold text-emerald-700">{total.toLocaleString()} ครั้ง</div>
-        <div className="text-xs text-gray-500 mt-1">{filtered.length} สาขามีคลิก</div>
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="bg-blue-50 p-3 rounded-lg">
+          <div className="text-xs text-gray-600">📝 สมัครสมาชิก</div>
+          <div className="text-2xl font-bold text-blue-700">{totalReg.toLocaleString()}</div>
+        </div>
+        <div className="bg-green-50 p-3 rounded-lg">
+          <div className="text-xs text-gray-600">➕ เพิ่ม Line OA</div>
+          <div className="text-2xl font-bold text-green-700">{totalLine.toLocaleString()}</div>
+        </div>
+        <div className="bg-emerald-50 p-3 rounded-lg">
+          <div className="text-xs text-gray-600">รวมทั้งหมด</div>
+          <div className="text-2xl font-bold text-emerald-700">{totalAll.toLocaleString()}</div>
+        </div>
       </div>
 
       {loading ? (
         <div className="text-center text-gray-500 py-8">กำลังโหลด...</div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-100 text-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100">
               <tr>
                 <th className="p-3 text-left">รหัส</th>
                 <th className="p-3 text-left">ภาค</th>
-                <th className="p-3 text-right">คลิก</th>
-                <th className="p-3 text-right">%</th>
+                <th className="p-3 text-right text-blue-700">สมัคร</th>
+                <th className="p-3 text-right text-green-700">Line</th>
+                <th className="p-3 text-right">รวม</th>
               </tr>
             </thead>
             <tbody>
@@ -83,14 +95,13 @@ export default function RegistrationsPage() {
                       {branchRegion[r.branch_code] || "?"}
                     </span>
                   </td>
-                  <td className="p-3 text-right">{r.count}</td>
-                  <td className="p-3 text-right text-gray-500 text-sm">
-                    {total ? ((r.count / total) * 100).toFixed(1) : 0}%
-                  </td>
+                  <td className="p-3 text-right text-blue-600">{r.register || 0}</td>
+                  <td className="p-3 text-right text-green-600">{r.line || 0}</td>
+                  <td className="p-3 text-right font-semibold">{r.count || 0}</td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={4} className="p-8 text-center text-gray-400">ยังไม่มีข้อมูล</td></tr>
+                <tr><td colSpan={5} className="p-8 text-center text-gray-400">ยังไม่มีข้อมูล</td></tr>
               )}
             </tbody>
           </table>
@@ -99,7 +110,7 @@ export default function RegistrationsPage() {
 
       <a href={`/api/registrations/export?days=${days}`}
         className="block mt-4 bg-blue-500 hover:bg-blue-600 text-white text-center py-3 rounded-lg font-semibold">
-        📥 Export CSV (ทั้งหมด)
+        📥 Export CSV
       </a>
     </main>
   );
