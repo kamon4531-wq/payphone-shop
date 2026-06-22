@@ -107,7 +107,7 @@ export const BRANCHES: { region: string; name: string; line_oa_id: string | null
   { region: "R4", name: "B15:PA เซ็นทรัล ภูเก็ต", line_oa_id: "@999pmqdx" },
   { region: "R4", name: "B20:PA เซ็นทรัล สุราษฎร์ธานี", line_oa_id: "@056wszlv" },
   { region: "R4", name: "B30:PA เซ็นทรัลเฟสติวัล หาดใหญ่", line_oa_id: "@845qfqir" },
-  { region: "R4", name: "B32:PA เซ็นทรัล สมุย", line_oa_id: null },
+  { region: "R4", name: "B32:PA เซ็นทรัล สมุย", line_oa_id: "@417utbaj" },
   { region: "R4", name: "B44:PA โรบินสัน ศรีสมาน", line_oa_id: "@629kojef" },
   { region: "R4", name: "B49:PA เซ็นทรัล นครศรีธรรมราช", line_oa_id: "@367dnwwj" },
   { region: "R4", name: "B50:PA โรบินสัน ราชบุรี", line_oa_id: "@783stwju" },
