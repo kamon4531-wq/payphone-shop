@@ -28,6 +28,7 @@ export default function OrderModal({
   const [loading, setLoading] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
   const [zoom, setZoom] = useState({ show: false, x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("selectedBranch") : null;
@@ -84,6 +85,25 @@ export default function OrderModal({
     setZoom({ show: true, x, y });
   }
 
+  function updateImageByPosition(clientX: number, target: HTMLElement) {
+    if (images.length < 2) return;
+    const rect = target.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const percent = Math.max(0, Math.min(0.9999, x / rect.width));
+    const idx = Math.floor(percent * images.length);
+    setImgIdx(idx);
+  }
+
+  function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
+    setDragging(true);
+    updateImageByPosition(e.touches[0].clientX, e.currentTarget);
+  }
+  function handleTouchMove(e: React.TouchEvent<HTMLDivElement>) {
+    if (!dragging) return;
+    updateImageByPosition(e.touches[0].clientX, e.currentTarget);
+  }
+  function handleTouchEnd() { setDragging(false); }
+
   function selectBranch(n: string) {
     setBranch(n);
     setBranchSearch(n);
@@ -115,13 +135,16 @@ export default function OrderModal({
         {step==="detail" && (
           <div className="overflow-y-auto">
             <div
-              className="relative bg-gray-50 h-64 md:h-72 overflow-hidden cursor-zoom-in"
+              className="relative bg-gray-50 h-64 md:h-72 overflow-hidden select-none touch-none cursor-grab active:cursor-grabbing"
               onMouseMove={handleMouseMove}
               onMouseLeave={() => setZoom({ show: false, x: 0, y: 0 })}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={zoom.show ? optImg(currentImg, 1200) : optImg(currentImg, 600)} alt={product.name}
-                className="w-full h-full object-contain p-4 transition-transform duration-200"
+                className="w-full h-full object-contain p-4 transition-transform duration-200 pointer-events-none"
                 style={zoom.show ? {
                   transform: `scale(2)`,
                   transformOrigin: `${zoom.x}% ${zoom.y}%`
@@ -142,6 +165,9 @@ export default function OrderModal({
                     className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-9 h-9 shadow z-10">‹</button>
                   <button onClick={() => setImgIdx(i => (i + 1) % images.length)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-9 h-9 shadow z-10">›</button>
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                    👆 ลากนิ้วซ้าย-ขวาเพื่อเปลี่ยนมุม · {imgIdx+1}/{images.length}
+                  </div>
                 </>
               )}
             </div>
