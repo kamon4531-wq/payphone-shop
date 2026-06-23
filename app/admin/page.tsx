@@ -9,11 +9,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetch("/api/admin/me").then(async r => {
-      if (r.ok) {
-        const d = await r.json();
-        setMe(d.user);
-        setAuthed(true);
-      } else setAuthed(false);
+      if (r.ok) { const d = await r.json(); setMe(d.user); setAuthed(true); } else setAuthed(false);
     });
   }, []);
 
@@ -48,10 +44,10 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 function Dashboard({ me }: { me: any }) {
-  const [tab, setTab] = useState<"products" | "orders">("products");
+  const [tab, setTab] = useState<"products" | "orders">("orders");
   const isOwner = me?.role === "owner";
   const canManageProducts = me?.role === "owner" || me?.role === "hq_admin";
-  
+
   return (
     <div className="max-w-6xl mx-auto p-4">
       <header className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -283,13 +279,55 @@ function OrdersTab() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [viewSlip, setViewSlip] = useState<string | null>(null);
   const [branchFilter, setBranchFilter] = useState("");
+  const [soundOn, setSoundOn] = useState(true);
+  const [lastCount, setLastCount] = useState<number | null>(null);
+  const [newOrderFlash, setNewOrderFlash] = useState(false);
 
-  async function load() {
+  function playBeep() {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880;
+      g.gain.value = 0.3;
+      o.start();
+      setTimeout(() => { o.frequency.value = 1320; }, 150);
+      setTimeout(() => { o.stop(); ctx.close(); }, 350);
+    } catch {}
+  }
+
+  async function load(notify = true) {
     const r = await fetch("/api/orders/list");
     const d = await r.json();
-    setOrders(d.orders || []);
+    const newOrders = d.orders || [];
+    setOrders(newOrders);
+    if (lastCount !== null && newOrders.length > lastCount && notify) {
+      const diff = newOrders.length - lastCount;
+      if (soundOn) playBeep();
+      setNewOrderFlash(true);
+      setTimeout(() => setNewOrderFlash(false), 5000);
+      document.title = `🔔 (${diff}) ออเดอร์ใหม่ - Admin`;
+      try {
+        if (Notification.permission === "granted") {
+          new Notification("📦 ออเดอร์ใหม่!", { body: `มีออเดอร์ใหม่ ${diff} รายการ` });
+        }
+      } catch {}
+    }
+    setLastCount(newOrders.length);
   }
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load(false);
+    try { if (Notification.permission === "default") Notification.requestPermission(); } catch {}
+    const interval = setInterval(() => load(true), 15000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!newOrderFlash) document.title = "Admin Dashboard";
+  }, [newOrderFlash]);
 
   function copyAddr(text: string) {
     navigator.clipboard.writeText(text);
@@ -299,13 +337,13 @@ function OrdersTab() {
   async function delSlip(id: string) {
     if (!confirm("ลบสลิปออเดอร์นี้?")) return;
     const r = await fetch(`/api/orders?id=${id}&action=clear-slip`, { method: "DELETE" });
-    if (r.ok) load(); else alert("ลบไม่สำเร็จ");
+    if (r.ok) load(false); else alert("ลบไม่สำเร็จ");
   }
 
   async function delOrder(id: string) {
     if (!confirm("ลบออเดอร์นี้ทั้งหมด?")) return;
     const r = await fetch(`/api/orders?id=${id}`, { method: "DELETE" });
-    if (r.ok) load(); else alert("ลบไม่สำเร็จ");
+    if (r.ok) load(false); else alert("ลบไม่สำเร็จ");
   }
 
   const filtered = useMemo(() =>
@@ -339,9 +377,23 @@ function OrdersTab() {
 
   return (
     <div>
+      {newOrderFlash && (
+        <div className="bg-red-500 text-white p-3 rounded-lg mb-3 text-center font-bold animate-pulse">
+          🔔 ออเดอร์ใหม่เข้ามา!
+        </div>
+      )}
       <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
-        <span className="text-sm text-gray-500">แสดง {filtered.length} / {orders.length} ออเดอร์</span>
-        <div className="flex gap-2 items-center">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">แสดง {filtered.length} / {orders.length} ออเดอร์</span>
+          <span className="text-xs text-gray-400">🔄 รีเฟรชอัตโนมัติทุก 15 วินาที</span>
+        </div>
+        <div className="flex gap-2 items-center flex-wrap">
+          <button onClick={() => setSoundOn(!soundOn)}
+            className={`text-sm px-3 py-1 rounded ${soundOn ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+            {soundOn ? "🔊 เสียงเปิด" : "🔇 ปิดเสียง"}
+          </button>
+          <button onClick={playBeep}
+            className="text-sm px-3 py-1 rounded bg-blue-100 text-blue-700">ทดสอบเสียง</button>
           <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)}
             className="border rounded px-2 py-1 text-sm">
             <option value="">ทุกสาขา</option>
