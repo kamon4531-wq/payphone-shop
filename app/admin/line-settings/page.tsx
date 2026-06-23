@@ -45,15 +45,24 @@ export default function LineSettingsPage() {
 
   async function test(code: string) {
     setTesting(code);
-    const r = await fetch("/api/line-settings/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ branch_code: code })
-    });
-    const d = await r.json();
-    setTesting(null);
-    if (d.ok) alert(`✅ ส่งทดสอบไป ${code} สำเร็จ! ตรวจ Line OA สาขา`);
-    else alert(`❌ ส่งล้มเหลว: ${d.error || "unknown"}`);
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const r = await fetch("/api/line-settings/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch_code: code }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      const d = await r.json();
+      setTesting(null);
+      if (d.ok) alert(`✅ ส่งทดสอบไป ${code} สำเร็จ! ตรวจ Line OA สาขา`);
+      else alert(`❌ ส่งล้มเหลว: ${d.error || "unknown"}`);
+    } catch (e: any) {
+      setTesting(null);
+      alert(`❌ Error: ${e.name === "AbortError" ? "Timeout 15s - API ไม่ตอบ" : e.message}`);
+    }
   }
 
   const configured = new Set(settings.map(s => s.branch_code));
