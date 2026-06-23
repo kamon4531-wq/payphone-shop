@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Product, Order, CATEGORIES } from "@/lib/types";
 
 export default function AdminPage() {
@@ -280,8 +280,11 @@ function OrdersTab() {
   const [viewSlip, setViewSlip] = useState<string | null>(null);
   const [branchFilter, setBranchFilter] = useState("");
   const [soundOn, setSoundOn] = useState(true);
-  const [lastCount, setLastCount] = useState<number | null>(null);
   const [newOrderFlash, setNewOrderFlash] = useState(false);
+  const lastCountRef = useRef<number | null>(null);
+  const soundOnRef = useRef(true);
+
+  useEffect(() => { soundOnRef.current = soundOn; }, [soundOn]);
 
   function playBeep() {
     try {
@@ -302,9 +305,10 @@ function OrdersTab() {
     const d = await r.json();
     const newOrders = d.orders || [];
     setOrders(newOrders);
-    if (lastCount !== null && newOrders.length > lastCount && notify) {
-      const diff = newOrders.length - lastCount;
-      if (soundOn) playBeep();
+    const prev = lastCountRef.current;
+    if (prev !== null && newOrders.length > prev && notify) {
+      const diff = newOrders.length - prev;
+      if (soundOnRef.current) playBeep();
       setNewOrderFlash(true);
       setTimeout(() => setNewOrderFlash(false), 5000);
       document.title = `🔔 (${diff}) ออเดอร์ใหม่ - Admin`;
@@ -314,7 +318,7 @@ function OrdersTab() {
         }
       } catch {}
     }
-    setLastCount(newOrders.length);
+    lastCountRef.current = newOrders.length;
   }
 
   useEffect(() => {
