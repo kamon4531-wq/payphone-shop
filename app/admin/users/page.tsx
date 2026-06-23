@@ -12,14 +12,10 @@ type User = {
   full_name?: string | null;
   email?: string | null;
   enabled?: boolean;
-  last_login_at?: string | null;
 };
 
 const ROLE_LABEL: Record<string, string> = {
-  owner: "Owner",
-  hq_admin: "HQ Admin",
-  region_manager: "Region Manager",
-  branch: "Branch"
+  owner: "Owner", hq_admin: "HQ Admin", region_manager: "Region Manager", branch: "Branch"
 };
 const ROLE_COLOR: Record<string, string> = {
   owner: "bg-purple-100 text-purple-700",
@@ -47,9 +43,8 @@ export default function UsersPage() {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!editing) return;
-    const method = editing.id ? "PUT" : "POST";
     const r = await fetch("/api/admin/users", {
-      method,
+      method: editing.id ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(editing)
     });
@@ -63,18 +58,13 @@ export default function UsersPage() {
     if (r.ok) load();
   }
 
-  async function generateAll() {
-    if (!confirm("สร้างบัญชีอัตโนมัติ:\n• 4 Region Manager (r1mgr-r4mgr)\n• 56 Branch (b02, b07, ...)\n\nบัญชีที่มีอยู่จะไม่ถูกแก้\n\nดำเนินการ?")) return;
-    
-    const r = await fetch("/api/admin/users/bulk-create", { method: "POST" });
-    if (!r.ok) { alert("เกิดข้อผิดพลาด"); return; }
-    const d = await r.json();
-    
-    alert(`สร้างสำเร็จ ${d.total_created} คน${d.total_skipped > 0 ? `\nข้าม ${d.total_skipped} คน (มีอยู่แล้ว)` : ""}\n\nกำลังดาวน์โหลด CSV...`);
-    
-    const headers = ["Username","Password","Role","Branch","Region","Name"];
-    const rows = d.created.map((u: any) => [
-      u.username, u.password, u.role, u.branch_code || "", u.region_code || "", u.full_name || ""
+  function downloadCSV(data: any[], filename: string) {
+    const headers = ["Username","Password","Role","Branch","Region","ชื่อ","สถานะ"];
+    const rows = data.map((u: any) => [
+      u.username, u.password, u.role,
+      u.branch_code || "", u.region_code || "",
+      u.full_name || "",
+      u.status || ""
     ]);
     const csv = [headers, ...rows].map((r: any) =>
       r.map((c: any) => `"${String(c).replace(/"/g, '""')}"`).join(",")
@@ -83,9 +73,38 @@ export default function UsersPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `accounts-${new Date().toISOString().slice(0,10)}.csv`;
+    a.download = filename;
+    document.body.appendChild(a);
     a.click();
-    
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function generateAll() {
+    if (!confirm("สร้างบัญชีใหม่อัตโนมัติ:\n• 4 Region Manager (r1mgr-r4mgr)\n• 56 Branch (b02, b07, ...)\n\nบัญชีที่มีอยู่จะไม่ถูกแก้\n\nดำเนินการ?")) return;
+    const r = await fetch("/api/admin/users/bulk-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "create" })
+    });
+    if (!r.ok) { alert("เกิดข้อผิดพลาด"); return; }
+    const d = await r.json();
+    downloadCSV(d.result, `accounts-${new Date().toISOString().slice(0,10)}.csv`);
+    alert(`สำเร็จ ${d.total} รายการ - ดาวน์โหลด CSV แล้ว`);
+    load();
+  }
+
+  async function resetAll() {
+    if (!confirm("รีเซ็ตรหัสผ่านทุกบัญชีใหม่?\n\n⚠️ ทุก Branch + Region Manager จะได้รหัสผ่านใหม่\n(ไม่กระทบ Owner / HQ Admin)\n\nดาวน์โหลด CSV รหัสใหม่")) return;
+    const r = await fetch("/api/admin/users/bulk-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "reset" })
+    });
+    if (!r.ok) { alert("เกิดข้อผิดพลาด"); return; }
+    const d = await r.json();
+    downloadCSV(d.result, `accounts-reset-${new Date().toISOString().slice(0,10)}.csv`);
+    alert(`รีเซ็ต ${d.total} รายการ - ดาวน์โหลด CSV แล้ว`);
     load();
   }
 
@@ -100,9 +119,11 @@ export default function UsersPage() {
 
       <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
         <div className="text-sm text-gray-600">รวม {users.length} คน</div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={generateAll}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">🎲 สร้างทั้งหมดอัตโนมัติ</button>
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">🎲 สร้างทั้งหมด</button>
+          <button onClick={resetAll}
+            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">🔄 รีเซ็ต+Export</button>
           <button onClick={() => setEditing({ username: "", password: "", role: "branch", enabled: true })}
             className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">+ เพิ่มผู้ใช้</button>
         </div>
@@ -236,7 +257,7 @@ export default function UsersPage() {
                 </tr>
               ))}
               {users.length === 0 && (
-                <tr><td colSpan={6} className="p-8 text-center text-gray-400">ยังไม่มีผู้ใช้งาน — กด + เพิ่ม</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center text-gray-400">ยังไม่มีผู้ใช้งาน</td></tr>
               )}
             </tbody>
           </table>
