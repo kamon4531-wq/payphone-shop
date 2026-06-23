@@ -4,9 +4,18 @@ import { Product, Order, CATEGORIES } from "@/lib/types";
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [me, setMe] = useState<any>(null);
   const [u, setU] = useState(""); const [p, setP] = useState(""); const [err, setErr] = useState("");
 
-  useEffect(() => { fetch("/api/admin/me").then(r => setAuthed(r.ok)); }, []);
+  useEffect(() => {
+    fetch("/api/admin/me").then(async r => {
+      if (r.ok) {
+        const d = await r.json();
+        setMe(d.user);
+        setAuthed(true);
+      } else setAuthed(false);
+    });
+  }, []);
 
   async function login(e: React.FormEvent) {
     e.preventDefault(); setErr("");
@@ -14,7 +23,8 @@ export default function AdminPage() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: u, password: p })
     });
-    if (r.ok) setAuthed(true); else setErr("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+    if (r.ok) { const d = await r.json(); setMe(d.user); setAuthed(true); }
+    else setErr("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
   }
 
   if (authed === null) return <div className="p-10 text-center">กำลังโหลด...</div>;
@@ -30,32 +40,52 @@ export default function AdminPage() {
       </form>
     </div>
   );
-  return <Dashboard />;
+  return <Dashboard me={me} />;
 }
 
-function Dashboard() {
+const ROLE_LABEL: Record<string, string> = {
+  owner: "Owner", hq_admin: "HQ Admin", region_manager: "Region Mgr", branch: "Branch"
+};
+
+function Dashboard({ me }: { me: any }) {
   const [tab, setTab] = useState<"products" | "orders">("products");
+  const isOwner = me?.role === "owner";
+  const canManageProducts = me?.role === "owner" || me?.role === "hq_admin";
+  
   return (
     <div className="max-w-6xl mx-auto p-4">
       <header className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h1 className="text-xl font-bold">Admin Dashboard</h1>
+        <div>
+          <h1 className="text-xl font-bold">Admin Dashboard</h1>
+          {me && (
+            <div className="text-xs text-gray-500 mt-0.5">
+              👤 {me.username} · <span className="font-semibold">{ROLE_LABEL[me.role]}</span>
+              {me.branch_code && ` · สาขา ${me.branch_code}`}
+              {me.region_code && ` · ภาค ${me.region_code}`}
+            </div>
+          )}
+        </div>
         <div className="flex gap-3 items-center flex-wrap">
-          <a href="/admin/qr" className="text-sm text-blue-600 hover:underline">📱 QR สาขา</a>
-          <a href="/admin/registrations" className="text-sm text-blue-600 hover:underline">📊 สถิติคลิก</a>
-          <a href="/admin/line-settings" className="text-sm text-blue-600 hover:underline">🔔 Line สาขา</a>
+          {canManageProducts && <a href="/admin/qr" className="text-sm text-blue-600 hover:underline">📱 QR สาขา</a>}
+          {canManageProducts && <a href="/admin/registrations" className="text-sm text-blue-600 hover:underline">📊 สถิติคลิก</a>}
+          {isOwner && <a href="/admin/line-settings" className="text-sm text-blue-600 hover:underline">🔔 Line สาขา</a>}
+          {isOwner && <a href="/admin/users" className="text-sm text-blue-600 hover:underline">👥 ผู้ใช้</a>}
           <a href="/" className="text-sm text-gray-600 hover:underline">← หน้าร้าน</a>
           <button onClick={async () => { await fetch("/api/admin/logout", { method: "POST" }); location.reload(); }}
             className="text-sm text-red-500">ออกจากระบบ</button>
         </div>
       </header>
       <div className="flex gap-2 mb-4 border-b">
-        {["products", "orders"].map(t => (
-          <button key={t} onClick={() => setTab(t as any)}
-            className={`px-4 py-2 ${tab === t ? "border-b-2 border-emerald-500 font-semibold" : "text-gray-500"}`}
-          >{t === "products" ? "สินค้า" : "ออเดอร์"}</button>
-        ))}
+        {canManageProducts && (
+          <button onClick={() => setTab("products")}
+            className={`px-4 py-2 ${tab === "products" ? "border-b-2 border-emerald-500 font-semibold" : "text-gray-500"}`}
+          >สินค้า</button>
+        )}
+        <button onClick={() => setTab("orders")}
+          className={`px-4 py-2 ${tab === "orders" ? "border-b-2 border-emerald-500 font-semibold" : "text-gray-500"}`}
+        >ออเดอร์</button>
       </div>
-      {tab === "products" ? <ProductsTab /> : <OrdersTab />}
+      {tab === "products" && canManageProducts ? <ProductsTab /> : <OrdersTab />}
     </div>
   );
 }
