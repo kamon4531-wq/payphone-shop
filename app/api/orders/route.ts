@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isAdmin } from "@/lib/auth";
+import { notifyBranch } from "@/lib/lineNotify";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -36,6 +37,25 @@ export async function POST(req: NextRequest) {
     order_number: orderNumber
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // === Line Notification to Branch ===
+  if (body.branch) {
+    const branchCode = body.branch.split(":")[0];
+    const message = `🔔 ออเดอร์ใหม่!\n\n` +
+      `📦 ${orderNumber}\n` +
+      `👤 ${body.customer_name}\n` +
+      `📱 ${body.phone}\n` +
+      `🏬 ${body.branch}\n` +
+      `📦 ${body.product_name}\n` +
+      `💰 ฿${body.price.toLocaleString()}\n` +
+      (body.transfer_time ? `⏰ โอน: ${new Date(body.transfer_time).toLocaleString("th-TH")}\n` : "") +
+      (body.address ? `\n📍 ${body.address}` : "") +
+      (body.province ? `\n🗺 ${body.province}` : "");
+
+    // Send in background (don't wait)
+    notifyBranch(branchCode, message).catch(e => console.error("Line notify failed:", e));
+  }
+
   return NextResponse.json({ order: data });
 }
 
