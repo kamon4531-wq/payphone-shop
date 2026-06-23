@@ -6,10 +6,24 @@ import { BRANCHES } from "@/lib/types";
 function genPassword(len = 10): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
   let p = "";
-  for (let i = 0; i < len; i++) {
-    p += chars[Math.floor(Math.random() * chars.length)];
-  }
+  for (let i = 0; i < len; i++) p += chars[Math.floor(Math.random() * chars.length)];
   return p;
+}
+
+async function upsertUser(admin: any, user: any, mode: string) {
+  const password = genPassword(10);
+  const hash = hashPassword(password);
+  const { data: existing } = await admin.from("admin_users").select("id").eq("username", user.username).single();
+
+  if (existing) {
+    if (mode === "reset") {
+      await admin.from("admin_users").update({ password_hash: hash, enabled: true }).eq("id", existing.id);
+      return { ...user, password, status: "reset" };
+    }
+    return { ...user, password: "(ไม่เปลี่ยน)", status: "exists" };
+  }
+  await admin.from("admin_users").insert({ ...user, password_hash: hash, enabled: true });
+  return { ...user, password, status: "created" };
 }
 
 export async function POST(req: NextRequest) {
@@ -17,59 +31,32 @@ export async function POST(req: NextRequest) {
   if (u?.role !== "owner") return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
-  const mode = body.mode || "create"; // create | reset
+  const mode = body.mode || "create";
 
   const admin = supabaseAdmin();
   const result: any[] = [];
 
-  // Region Managers
-  for (const region of ["R1", "R2", "R3", "R4"]) {
-    const username = `${region.toLowerCase()}mgr`;
-    const password = genPassword(10);
-    const hash = hashPassword(password);
+  // 1) HQ Admin
+  result.push(await upsertUser(admin, {
+    username: "hq", role: "hq_admin",
+    branch_code: null, region_code: null, full_name: "HQ Admin (ผู้บริหาร)"
+  }, mode));
 
-    const { data: existing } = await admin.from("admin_users").select("id").eq("username", username).single();
-    
-    if (existing) {
-      if (mode === "reset") {
-        await admin.from("admin_users").update({ password_hash: hash, enabled: true }).eq("id", existing.id);
-        result.push({ username, password, role: "region_manager", region_code: region, full_name: `Region Manager ${region}`, status: "reset" });
-      } else {
-        result.push({ username, password: "(ไม่เปลี่ยน)", role: "region_manager", region_code: region, full_name: `Region Manager ${region}`, status: "exists" });
-      }
-    } else {
-      await admin.from("admin_users").insert({
-        username, password_hash: hash, role: "region_manager",
-        region_code: region, full_name: `Region Manager ${region}`, enabled: true
-      });
-      result.push({ username, password, role: "region_manager", region_code: region, full_name: `Region Manager ${region}`, status: "created" });
-    }
+  // 2) Region Managers
+  for (const region of ["R1", "R2", "R3", "R4"]) {
+    result.push(await upsertUser(admin, {
+      username: `${region.toLowerCase()}mgr`, role: "region_manager",
+      branch_code: null, region_code: region, full_name: `Region Manager ${region}`
+    }, mode));
   }
 
-  // Branches
+  // 3) Branches
   for (const b of BRANCHES) {
     const code = b.name.split(":")[0];
-    const username = code.toLowerCase();
-    const password = genPassword(10);
-    const hash = hashPassword(password);
-    const fullName = b.name.split(":")[1] || b.name;
-
-    const { data: existing } = await admin.from("admin_users").select("id").eq("username", username).single();
-    
-    if (existing) {
-      if (mode === "reset") {
-        await admin.from("admin_users").update({ password_hash: hash, enabled: true }).eq("id", existing.id);
-        result.push({ username, password, role: "branch", branch_code: code, region_code: b.region, full_name: fullName, status: "reset" });
-      } else {
-        result.push({ username, password: "(ไม่เปลี่ยน)", role: "branch", branch_code: code, region_code: b.region, full_name: fullName, status: "exists" });
-      }
-    } else {
-      await admin.from("admin_users").insert({
-        username, password_hash: hash, role: "branch",
-        branch_code: code, region_code: b.region, full_name: fullName, enabled: true
-      });
-      result.push({ username, password, role: "branch", branch_code: code, region_code: b.region, full_name: fullName, status: "created" });
-    }
+    result.push(await upsertUser(admin, {
+      username: code.toLowerCase(), role: "branch",
+      branch_code: code, region_code: b.region, full_name: b.name.split(":")[1] || b.name
+    }, mode));
   }
 
   return NextResponse.json({ result, total: result.length });
