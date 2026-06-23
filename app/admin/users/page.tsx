@@ -63,6 +63,32 @@ export default function UsersPage() {
     if (r.ok) load();
   }
 
+  async function generateAll() {
+    if (!confirm("สร้างบัญชีอัตโนมัติ:\n• 4 Region Manager (r1mgr-r4mgr)\n• 56 Branch (b02, b07, ...)\n\nบัญชีที่มีอยู่จะไม่ถูกแก้\n\nดำเนินการ?")) return;
+    
+    const r = await fetch("/api/admin/users/bulk-create", { method: "POST" });
+    if (!r.ok) { alert("เกิดข้อผิดพลาด"); return; }
+    const d = await r.json();
+    
+    alert(`สร้างสำเร็จ ${d.total_created} คน${d.total_skipped > 0 ? `\nข้าม ${d.total_skipped} คน (มีอยู่แล้ว)` : ""}\n\nกำลังดาวน์โหลด CSV...`);
+    
+    const headers = ["Username","Password","Role","Branch","Region","Name"];
+    const rows = d.created.map((u: any) => [
+      u.username, u.password, u.role, u.branch_code || "", u.region_code || "", u.full_name || ""
+    ]);
+    const csv = [headers, ...rows].map((r: any) =>
+      r.map((c: any) => `"${String(c).replace(/"/g, '""')}"`).join(",")
+    ).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `accounts-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    
+    load();
+  }
+
   if (err) return <div className="p-10 text-center text-red-500">{err}</div>;
 
   return (
@@ -72,10 +98,14 @@ export default function UsersPage() {
         <a href="/admin" className="text-sm text-emerald-600 hover:underline">← Admin</a>
       </header>
 
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
         <div className="text-sm text-gray-600">รวม {users.length} คน</div>
-        <button onClick={() => setEditing({ username: "", password: "", role: "branch", enabled: true })}
-          className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-semibold">+ เพิ่มผู้ใช้</button>
+        <div className="flex gap-2">
+          <button onClick={generateAll}
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">🎲 สร้างทั้งหมดอัตโนมัติ</button>
+          <button onClick={() => setEditing({ username: "", password: "", role: "branch", enabled: true })}
+            className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">+ เพิ่มผู้ใช้</button>
+        </div>
       </div>
 
       {editing && (
@@ -192,7 +222,7 @@ export default function UsersPage() {
                   </td>
                   <td className="p-3 text-xs">
                     {u.branch_code && <span>สาขา {u.branch_code}</span>}
-                    {u.region_code && <span>ภาค {u.region_code}</span>}
+                    {u.region_code && !u.branch_code && <span>ภาค {u.region_code}</span>}
                     {!u.branch_code && !u.region_code && <span className="text-gray-400">ทั้งหมด</span>}
                   </td>
                   <td className="p-3 text-xs">{u.full_name || "-"}</td>
