@@ -86,7 +86,7 @@ export const BRANCHES: { region: string; name: string; line_oa_id: string | null
   { region: "R2", name: "B53:PA โรบินสัน ลพบุรี", line_oa_id: "@415nbwul" },
   { region: "R2", name: "B59:PA โรบินสัน กำแพงเพชร", line_oa_id: "@691nzmcv" },
   { region: "R2", name: "B68:PA บิ๊กซี ลำพูน", line_oa_id: "@651aujcp" },
-  { region: "R2", name: "B83:PA เซ็นทรัล อยุธยา", line_oa_id: "@205mdgg" },
+  { region: "R2", name: "B83:PA เซ็นทรัล อยุธยา", line_oa_id: "@205omdgg" },
   { region: "R2", name: "B87:PA เซ็นทรัล นครสวรรค์", line_oa_id: "@603gtlrh" },
   { region: "R2", name: "B88:PA Big C สระบุรี", line_oa_id: "@730stugm" },
   { region: "R3", name: "B10:PA ตึกคอม พัทยาใต้", line_oa_id: "@781lkbxm" },
