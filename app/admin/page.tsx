@@ -19,11 +19,8 @@ export default function AdminPage() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: u, password: p })
     });
-    if (r.ok) {
-      const d = await r.json();
-      setMe(d.user);
-      setAuthed(true);
-    } else setErr("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+    if (r.ok) { const d = await r.json(); setMe(d.user); setAuthed(true); }
+    else setErr("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
   }
 
   if (authed === null) return <div className="p-10 text-center">กำลังโหลด...</div>;
@@ -52,22 +49,22 @@ function PushButton() {
 
   async function enable() {
     setBusy(true);
-    setStatus("กำลังเปิด...");
     try {
-      if (!('serviceWorker' in navigator)) { setStatus("❌ Browser ไม่รองรับ"); setBusy(false); return; }
-      if (!('PushManager' in window)) { setStatus("❌ Browser ไม่รองรับ Push"); setBusy(false); return; }
+      setStatus("1/5 ตรวจ Browser...");
+      if (!('serviceWorker' in navigator)) { setStatus("❌ Browser ไม่มี SW"); setBusy(false); return; }
+      if (!('PushManager' in window)) { setStatus("❌ Browser ไม่มี Push"); setBusy(false); return; }
 
+      setStatus("2/5 ลงทะเบียน Service Worker...");
       let reg = await navigator.serviceWorker.getRegistration();
-      if (!reg) {
-        reg = await navigator.serviceWorker.register('/public/sw.js');
-        await navigator.serviceWorker.ready;
-      }
+      if (!reg) reg = await navigator.serviceWorker.register('/public/sw.js');
+      await navigator.serviceWorker.ready;
 
+      setStatus("3/5 ขอ Permission...");
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') { setStatus("❌ Permission: " + perm); setBusy(false); return; }
 
+      setStatus("4/5 Subscribe Push...");
       const vapidKey = "BLfx9RQtcW_Ef3yVfw8DRMdaBabB9JtExN7GSHZvAU0sMAzFwbKWlJm1V2lyAE1lz0TXLKSmyP-2hrmrYclzU44";
-      
       function urlBase64ToUint8Array(base64String: string) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
         const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -85,18 +82,15 @@ function PushButton() {
         });
       }
 
+      setStatus("5/5 ส่งไป Server...");
       const res = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sub)
       });
 
-      if (res.ok) {
-        setStatus("✅ เปิดสำเร็จ! ออเดอร์ใหม่จะเด้งมาที่มือถือนี้");
-      } else {
-        const t = await res.text();
-        setStatus("❌ API error: " + t);
-      }
+      if (res.ok) setStatus("✅ สำเร็จ! รอ Push ใหม่");
+      else { const t = await res.text(); setStatus("❌ API: " + t); }
     } catch (e: any) {
       setStatus("❌ Error: " + (e.message || "unknown"));
     }
@@ -112,7 +106,7 @@ function PushButton() {
           {busy ? "กำลัง..." : "🔔 เปิดแจ้งเตือน"}
         </button>
       </div>
-      {status && <div className="text-xs mt-2">{status}</div>}
+      {status && <div className="text-xs mt-2 font-mono">{status}</div>}
     </div>
   );
 }
@@ -206,32 +200,13 @@ function ProductsTab() {
     let image_url2 = editing?.image_url2 || null;
     let image_url3 = editing?.image_url3 || null;
     let drive_file_id = editing?.drive_file_id || null;
-
-    if (file1) {
-      const r = await uploadFile(file1);
-      if (!r) { alert("อัพโหลดรูปที่ 1 ล้มเหลว"); setBusy(false); return; }
-      image_url = r.url; drive_file_id = r.id;
-    }
-    if (file2) {
-      const r = await uploadFile(file2);
-      if (!r) { alert("อัพโหลดรูปที่ 2 ล้มเหลว"); setBusy(false); return; }
-      image_url2 = r.url;
-    }
-    if (file3) {
-      const r = await uploadFile(file3);
-      if (!r) { alert("อัพโหลดรูปที่ 3 ล้มเหลว"); setBusy(false); return; }
-      image_url3 = r.url;
-    }
-
+    if (file1) { const r = await uploadFile(file1); if (!r) { alert("อัพโหลดรูปที่ 1 ล้มเหลว"); setBusy(false); return; } image_url = r.url; drive_file_id = r.id; }
+    if (file2) { const r = await uploadFile(file2); if (!r) { alert("อัพโหลดรูปที่ 2 ล้มเหลว"); setBusy(false); return; } image_url2 = r.url; }
+    if (file3) { const r = await uploadFile(file3); if (!r) { alert("อัพโหลดรูปที่ 3 ล้มเหลว"); setBusy(false); return; } image_url3 = r.url; }
     const body = { ...editing, image_url, image_url2, image_url3, drive_file_id };
-    const r = await fetch("/api/products", {
-      method: editing?.id ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
+    const r = await fetch("/api/products", { method: editing?.id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     setBusy(false);
-    if (r.ok) { setEditing(null); setFile1(null); setFile2(null); setFile3(null); load(); }
-    else alert("บันทึกล้มเหลว");
+    if (r.ok) { setEditing(null); setFile1(null); setFile2(null); setFile3(null); load(); } else alert("บันทึกล้มเหลว");
   }
 
   async function del(id: string) {
@@ -247,17 +222,11 @@ function ProductsTab() {
         {(file || current) && (
           <div className="relative inline-block mb-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={file ? URL.createObjectURL(file) : current}
-              className="w-20 h-20 object-contain border rounded" alt=""/>
-            {current && !file && (
-              <button type="button" onClick={onClear}
-                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs">×</button>
-            )}
+            <img src={file ? URL.createObjectURL(file) : current} className="w-20 h-20 object-contain border rounded" alt=""/>
+            {current && !file && <button type="button" onClick={onClear} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs">×</button>}
           </div>
         )}
-        <input type="file" accept="image/*"
-          onChange={e => setFile(e.target.files?.[0] || null)}
-          className="block w-full text-xs"/>
+        <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)} className="block w-full text-xs"/>
       </div>
     );
   }
@@ -267,72 +236,41 @@ function ProductsTab() {
       <div className="flex flex-wrap gap-2 mb-3">
         <button onClick={() => setEditing({ category: "case", price: 0, old_price: null, description: "", badge_text: "" })}
           className="bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold">+ เพิ่มสินค้า</button>
-        <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="🔍 ค้นหาชื่อสินค้า..."
-          className="flex-1 min-w-[200px] border rounded-lg px-3 py-2 text-sm"/>
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 ค้นหา..." className="flex-1 min-w-[200px] border rounded-lg px-3 py-2 text-sm"/>
       </div>
-
       <div className="flex gap-2 overflow-x-auto pb-2 mb-3">
         {CATEGORIES.map(c => (
           <button key={c.id} onClick={() => setCat(c.id)}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs border transition ${
-              cat === c.id
-                ? "bg-emerald-400 border-emerald-400 text-black font-semibold"
-                : "bg-white border-gray-200 text-gray-700 hover:border-emerald-300"
-            }`}
-          >{c.name} ({countByCat[c.id] || 0})</button>
+            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs border transition ${cat === c.id ? "bg-emerald-400 border-emerald-400 text-black font-semibold" : "bg-white border-gray-200 text-gray-700 hover:border-emerald-300"}`}>
+            {c.name} ({countByCat[c.id] || 0})
+          </button>
         ))}
       </div>
-
       {editing && (
         <form onSubmit={save} className="bg-white p-4 rounded-xl shadow mb-4 space-y-3">
           <h3 className="font-semibold">{editing.id ? "แก้ไขสินค้า" : "เพิ่มสินค้าใหม่"}</h3>
-          <input required placeholder="ชื่อสินค้า" value={editing.name || ""}
-            onChange={e => setEditing({ ...editing, name: e.target.value })}
-            className="w-full border p-2 rounded"/>
-          <select value={editing.category || "case"}
-            onChange={e => setEditing({ ...editing, category: e.target.value })}
-            className="w-full border p-2 rounded">
-            {CATEGORIES.filter(c => c.id !== "all").map(c =>
-              <option key={c.id} value={c.id}>{c.name}</option>
-            )}
+          <input required placeholder="ชื่อสินค้า" value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className="w-full border p-2 rounded"/>
+          <select value={editing.category || "case"} onChange={e => setEditing({ ...editing, category: e.target.value })} className="w-full border p-2 rounded">
+            {CATEGORIES.filter(c => c.id !== "all").map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <div className="grid grid-cols-2 gap-2">
-            <input required type="number" placeholder="ราคา" value={editing.price ?? ""}
-              onChange={e => setEditing({ ...editing, price: Number(e.target.value) })}
-              className="border p-2 rounded"/>
-            <input type="number" placeholder="ราคาเก่า (ไม่บังคับ)" value={editing.old_price ?? ""}
-              onChange={e => setEditing({ ...editing, old_price: e.target.value ? Number(e.target.value) : null })}
-              className="border p-2 rounded"/>
+            <input required type="number" placeholder="ราคา" value={editing.price ?? ""} onChange={e => setEditing({ ...editing, price: Number(e.target.value) })} className="border p-2 rounded"/>
+            <input type="number" placeholder="ราคาเก่า" value={editing.old_price ?? ""} onChange={e => setEditing({ ...editing, old_price: e.target.value ? Number(e.target.value) : null })} className="border p-2 rounded"/>
           </div>
-          <input placeholder="ป้ายโปรโมชั่น (เช่น SALE 30%, NEW)" value={editing.badge_text || ""}
-            onChange={e => setEditing({ ...editing, badge_text: e.target.value })}
-            className="w-full border p-2 rounded"/>
-          <textarea placeholder="รายละเอียดสินค้า"
-            value={editing.description || ""}
-            onChange={e => setEditing({ ...editing, description: e.target.value })}
-            rows={5} className="w-full border p-2 rounded resize-y"/>
-
+          <input placeholder="ป้ายโปรโมชั่น" value={editing.badge_text || ""} onChange={e => setEditing({ ...editing, badge_text: e.target.value })} className="w-full border p-2 rounded"/>
+          <textarea placeholder="รายละเอียด" value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={5} className="w-full border p-2 rounded resize-y"/>
           <div className="grid grid-cols-3 gap-2">
-            <ImageSlot label="รูปหลัก *" current={editing.image_url} file={file1} setFile={setFile1}
-              onClear={() => setEditing({ ...editing, image_url: "" })}/>
-            <ImageSlot label="รูปที่ 2" current={editing.image_url2} file={file2} setFile={setFile2}
-              onClear={() => setEditing({ ...editing, image_url2: null })}/>
-            <ImageSlot label="รูปที่ 3" current={editing.image_url3} file={file3} setFile={setFile3}
-              onClear={() => setEditing({ ...editing, image_url3: null })}/>
+            <ImageSlot label="รูปหลัก *" current={editing.image_url} file={file1} setFile={setFile1} onClear={() => setEditing({ ...editing, image_url: "" })}/>
+            <ImageSlot label="รูปที่ 2" current={editing.image_url2} file={file2} setFile={setFile2} onClear={() => setEditing({ ...editing, image_url2: null })}/>
+            <ImageSlot label="รูปที่ 3" current={editing.image_url3} file={file3} setFile={setFile3} onClear={() => setEditing({ ...editing, image_url3: null })}/>
           </div>
-
           <div className="flex gap-2">
-            <button disabled={busy} className="bg-emerald-500 text-white px-4 py-2 rounded disabled:opacity-50">
-              {busy ? "กำลังบันทึก..." : "บันทึก"}</button>
-            <button type="button" onClick={() => { setEditing(null); setFile1(null); setFile2(null); setFile3(null); }}
-              className="bg-gray-200 px-4 py-2 rounded">ยกเลิก</button>
+            <button disabled={busy} className="bg-emerald-500 text-white px-4 py-2 rounded disabled:opacity-50">{busy ? "กำลังบันทึก..." : "บันทึก"}</button>
+            <button type="button" onClick={() => { setEditing(null); setFile1(null); setFile2(null); setFile3(null); }} className="bg-gray-200 px-4 py-2 rounded">ยกเลิก</button>
           </div>
         </form>
       )}
-
-      <div className="text-xs text-gray-500 mb-2">แสดง {filtered.length} จาก {products.length} รายการ</div>
-
+      <div className="text-xs text-gray-500 mb-2">แสดง {filtered.length} จาก {products.length}</div>
       <div className="grid gap-2">
         {filtered.map(p => (
           <div key={p.id} className="bg-white p-3 rounded-xl shadow flex items-center gap-3">
@@ -347,7 +285,7 @@ function ProductsTab() {
             <button onClick={() => del(p.id)} className="text-sm text-red-500 shrink-0">ลบ</button>
           </div>
         ))}
-        {filtered.length === 0 && <div className="text-center text-gray-500 py-8">ไม่พบสินค้าที่ตรงเงื่อนไข</div>}
+        {filtered.length === 0 && <div className="text-center text-gray-500 py-8">ไม่พบสินค้า</div>}
       </div>
     </div>
   );
@@ -361,18 +299,14 @@ function OrdersTab() {
   const [newOrderFlash, setNewOrderFlash] = useState(false);
   const lastCountRef = useRef<number | null>(null);
   const soundOnRef = useRef(true);
-
   useEffect(() => { soundOnRef.current = soundOn; }, [soundOn]);
 
   function playBeep() {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
+      const o = ctx.createOscillator(); const g = ctx.createGain();
       o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = 880;
-      g.gain.value = 0.3;
-      o.start();
+      o.frequency.value = 880; g.gain.value = 0.3; o.start();
       setTimeout(() => { o.frequency.value = 1320; }, 150);
       setTimeout(() => { o.stop(); ctx.close(); }, 350);
     } catch {}
@@ -391,78 +325,33 @@ function OrdersTab() {
     }
     lastCountRef.current = newOrders.length;
   }
+  useEffect(() => { load(false); const interval = setInterval(() => load(true), 15000); return () => clearInterval(interval); /* eslint-disable-line */ }, []);
 
-  useEffect(() => {
-    load(false);
-    const interval = setInterval(() => load(true), 15000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  function copyAddr(text: string) { navigator.clipboard.writeText(text); alert("คัดลอกแล้ว"); }
+  async function delSlip(id: string) { if (!confirm("ลบสลิป?")) return; const r = await fetch(`/api/orders?id=${id}&action=clear-slip`, { method: "DELETE" }); if (r.ok) load(false); else alert("ลบไม่สำเร็จ"); }
+  async function delOrder(id: string) { if (!confirm("ลบออเดอร์?")) return; const r = await fetch(`/api/orders?id=${id}`, { method: "DELETE" }); if (r.ok) load(false); else alert("ลบไม่สำเร็จ"); }
 
-  function copyAddr(text: string) {
-    navigator.clipboard.writeText(text);
-    alert("คัดลอกแล้ว");
-  }
-
-  async function delSlip(id: string) {
-    if (!confirm("ลบสลิปออเดอร์นี้?")) return;
-    const r = await fetch(`/api/orders?id=${id}&action=clear-slip`, { method: "DELETE" });
-    if (r.ok) load(false); else alert("ลบไม่สำเร็จ");
-  }
-
-  async function delOrder(id: string) {
-    if (!confirm("ลบออเดอร์นี้ทั้งหมด?")) return;
-    const r = await fetch(`/api/orders?id=${id}`, { method: "DELETE" });
-    if (r.ok) load(false); else alert("ลบไม่สำเร็จ");
-  }
-
-  const filtered = useMemo(() =>
-    branchFilter ? orders.filter(o => o.branch === branchFilter) : orders
-  , [orders, branchFilter]);
-
-  const branchList = useMemo(() =>
-    Array.from(new Set(orders.map(o => o.branch).filter(Boolean))) as string[]
-  , [orders]);
+  const filtered = useMemo(() => branchFilter ? orders.filter(o => o.branch === branchFilter) : orders, [orders, branchFilter]);
+  const branchList = useMemo(() => Array.from(new Set(orders.map(o => o.branch).filter(Boolean))) as string[], [orders]);
 
   function exportCSV() {
     const headers = ["เลขออเดอร์","วันที่สั่ง","ชื่อ","เบอร์","สาขา","จังหวัด","ที่อยู่","สินค้า","ราคา","เวลาโอน"];
-    const rows = filtered.map(o => [
-      o.order_number || o.id.slice(0,8),
-      new Date(o.created_at).toLocaleString("th-TH"),
-      o.customer_name, o.phone, o.branch || "",
-      o.province || "",
-      (o.address || "").replace(/\n/g, " "),
-      o.product_name, o.price, o.transfer_time || ""
-    ]);
-    const csv = [headers, ...rows].map(r =>
-      r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")
-    ).join("\n");
+    const rows = filtered.map(o => [o.order_number || o.id.slice(0,8), new Date(o.created_at).toLocaleString("th-TH"), o.customer_name, o.phone, o.branch || "", o.province || "", (o.address || "").replace(/\n/g, " "), o.product_name, o.price, o.transfer_time || ""]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
   }
 
   return (
     <div>
-      {newOrderFlash && (
-        <div className="bg-red-500 text-white p-3 rounded-lg mb-3 text-center font-bold animate-pulse">
-          🔔 ออเดอร์ใหม่!
-        </div>
-      )}
+      {newOrderFlash && <div className="bg-red-500 text-white p-3 rounded-lg mb-3 text-center font-bold animate-pulse">🔔 ออเดอร์ใหม่!</div>}
       <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
         <span className="text-sm text-gray-500">แสดง {filtered.length} / {orders.length}</span>
         <div className="flex gap-2 items-center flex-wrap">
-          <button onClick={() => setSoundOn(!soundOn)}
-            className={`text-sm px-3 py-1 rounded ${soundOn ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
-            {soundOn ? "🔊" : "🔇"}
-          </button>
+          <button onClick={() => setSoundOn(!soundOn)} className={`text-sm px-3 py-1 rounded ${soundOn ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>{soundOn ? "🔊" : "🔇"}</button>
           <button onClick={playBeep} className="text-sm px-3 py-1 rounded bg-blue-100 text-blue-700">ทดสอบเสียง</button>
           <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="border rounded px-2 py-1 text-sm">
-            <option value="">ทุกสาขา</option>
-            {branchList.map(b => <option key={b} value={b}>{b}</option>)}
+            <option value="">ทุกสาขา</option>{branchList.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
           <button onClick={exportCSV} className="bg-blue-500 text-white text-sm px-4 py-2 rounded-lg font-semibold">📥 Export</button>
         </div>
@@ -475,10 +364,7 @@ function OrdersTab() {
               <span>{new Date(o.created_at).toLocaleString("th-TH")}</span>
             </div>
             <div className="font-medium mt-1">{o.product_name}</div>
-            <div className="text-sm">
-              ลูกค้า: <b>{o.customer_name}</b> · <a className="text-blue-500" href={`tel:${o.phone}`}>{o.phone}</a>
-              {o.province && <> · <span className="text-purple-600">{o.province}</span></>}
-            </div>
+            <div className="text-sm">ลูกค้า: <b>{o.customer_name}</b> · <a className="text-blue-500" href={`tel:${o.phone}`}>{o.phone}</a>{o.province && <> · <span className="text-purple-600">{o.province}</span></>}</div>
             {o.branch && <div className="text-sm mt-1">🏬 <b className="text-emerald-700">{o.branch}</b></div>}
             {o.address && (
               <div className="mt-2 bg-gray-50 p-2 rounded flex justify-between items-start gap-2">
@@ -493,8 +379,7 @@ function OrdersTab() {
                 {o.slip_url ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={o.slip_url} alt="slip" onClick={() => setViewSlip(o.slip_url)}
-                      className="w-12 h-12 object-cover rounded border cursor-pointer"/>
+                    <img src={o.slip_url} alt="slip" onClick={() => setViewSlip(o.slip_url)} className="w-12 h-12 object-cover rounded border cursor-pointer"/>
                     <button onClick={() => delSlip(o.id)} className="text-xs text-orange-500">ลบสลิป</button>
                   </>
                 ) : <span className="text-xs text-gray-400">ไม่มีสลิป</span>}
@@ -506,8 +391,7 @@ function OrdersTab() {
         {filtered.length === 0 && <div className="text-center text-gray-500 py-8">ยังไม่มีออเดอร์</div>}
       </div>
       {viewSlip && (
-        <div onClick={() => setViewSlip(null)}
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-pointer">
+        <div onClick={() => setViewSlip(null)} className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-pointer">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={viewSlip} alt="slip" className="max-w-full max-h-full object-contain"/>
         </div>
