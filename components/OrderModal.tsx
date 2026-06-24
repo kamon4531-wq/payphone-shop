@@ -20,6 +20,8 @@ export default function OrderModal({
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [province, setProvince] = useState("");
+  const [provinceSearch, setProvinceSearch] = useState("");
+  const [provinceOpen, setProvinceOpen] = useState(false);
   const [branch, setBranch] = useState("");
   const [branchSearch, setBranchSearch] = useState("");
   const [branchOpen, setBranchOpen] = useState(false);
@@ -28,7 +30,6 @@ export default function OrderModal({
   const [loading, setLoading] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
   const [zoom, setZoom] = useState({ show: false, x: 0, y: 0 });
-  const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("selectedBranch") : null;
@@ -41,6 +42,14 @@ export default function OrderModal({
     return BRANCHES.filter(b => b.name.toLowerCase().includes(q));
   }, [branchSearch]);
 
+  const filteredProvinces = useMemo(() => {
+    if (!provinceSearch) return THAI_PROVINCES;
+    const q = provinceSearch.toLowerCase();
+    return THAI_PROVINCES.filter(p => 
+      p.toLowerCase().includes(q) || provName(p).toLowerCase().includes(q)
+    );
+  }, [provinceSearch, provName]);
+
   if (!product) return null;
 
   const images = [product.image_url, product.image_url2, product.image_url3].filter(Boolean) as string[];
@@ -51,6 +60,7 @@ export default function OrderModal({
     e.preventDefault();
     if (!slipFile) { alert(t("uploadSlip")); return; }
     if (!branch) { alert("กรุณาเลือกสาขา"); return; }
+    if (!province) { alert("กรุณาเลือกจังหวัด"); return; }
     setLoading(true);
     const fd = new FormData(); fd.append("file", slipFile);
     const up = await fetch("/api/upload", { method: "POST", body: fd });
@@ -85,29 +95,16 @@ export default function OrderModal({
     setZoom({ show: true, x, y });
   }
 
-  function updateImageByPosition(clientX: number, target: HTMLElement) {
-    if (images.length < 2) return;
-    const rect = target.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const percent = Math.max(0, Math.min(0.9999, x / rect.width));
-    const idx = Math.floor(percent * images.length);
-    setImgIdx(idx);
-  }
-
-  function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
-    setDragging(true);
-    updateImageByPosition(e.touches[0].clientX, e.currentTarget);
-  }
-  function handleTouchMove(e: React.TouchEvent<HTMLDivElement>) {
-    if (!dragging) return;
-    updateImageByPosition(e.touches[0].clientX, e.currentTarget);
-  }
-  function handleTouchEnd() { setDragging(false); }
-
   function selectBranch(n: string) {
     setBranch(n);
     setBranchSearch(n);
     setBranchOpen(false);
+  }
+
+  function selectProvince(p: string) {
+    setProvince(p);
+    setProvinceSearch(provName(p));
+    setProvinceOpen(false);
   }
 
   return (
@@ -135,16 +132,13 @@ export default function OrderModal({
         {step==="detail" && (
           <div className="overflow-y-auto">
             <div
-              className="relative bg-gray-50 h-64 md:h-72 overflow-hidden select-none touch-none cursor-grab active:cursor-grabbing"
+              className="relative bg-gray-50 h-64 md:h-72 overflow-hidden cursor-zoom-in"
               onMouseMove={handleMouseMove}
               onMouseLeave={() => setZoom({ show: false, x: 0, y: 0 })}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={zoom.show ? optImg(currentImg, 1200) : optImg(currentImg, 600)} alt={product.name}
-                className="w-full h-full object-contain p-4 transition-transform duration-200 pointer-events-none"
+                className="w-full h-full object-contain p-4 transition-transform duration-200"
                 style={zoom.show ? {
                   transform: `scale(2)`,
                   transformOrigin: `${zoom.x}% ${zoom.y}%`
@@ -165,9 +159,6 @@ export default function OrderModal({
                     className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-9 h-9 shadow z-10">‹</button>
                   <button onClick={() => setImgIdx(i => (i + 1) % images.length)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full w-9 h-9 shadow z-10">›</button>
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
-                    👆 ลากนิ้วซ้าย-ขวาเพื่อเปลี่ยนมุม · {imgIdx+1}/{images.length}
-                  </div>
                 </>
               )}
             </div>
@@ -203,7 +194,7 @@ export default function OrderModal({
         )}
 
         {step==="info" && (
-          <form onSubmit={e=>{e.preventDefault(); if(!branch){alert("กรุณาเลือกสาขา"); return;} setStep("pay");}} className="p-4 space-y-3 overflow-y-auto">
+          <form onSubmit={e=>{e.preventDefault(); if(!branch){alert("กรุณาเลือกสาขา"); return;} if(!province){alert("กรุณาเลือกจังหวัด"); return;} setStep("pay");}} className="p-4 space-y-3 overflow-y-auto">
             <div>
               <label className="text-sm text-gray-700">{t("fullName")} <span className="text-red-500">*</span></label>
               <input required value={name} onChange={e=>setName(e.target.value)}
@@ -238,13 +229,28 @@ export default function OrderModal({
               )}
               {branch && <div className="text-xs text-emerald-600 mt-1">✓ {branch}</div>}
             </div>
-            <div>
+            <div className="relative">
               <label className="text-sm text-gray-700">{t("province")} <span className="text-red-500">*</span></label>
-              <select required value={province} onChange={e=>setProvince(e.target.value)}
-                className="w-full border rounded-lg p-2 mt-1">
-                <option value="">{t("selectProvince")}</option>
-                {THAI_PROVINCES.map(p=> <option key={p} value={p}>{provName(p)}</option>)}
-              </select>
+              <input type="text" value={provinceSearch}
+                onChange={e => { setProvinceSearch(e.target.value); setProvince(""); setProvinceOpen(true); }}
+                onFocus={() => setProvinceOpen(true)}
+                onBlur={() => setTimeout(() => setProvinceOpen(false), 200)}
+                className="w-full border rounded-lg p-2 mt-1"
+                placeholder="🔍 พิมพ์ค้นหาจังหวัด"/>
+              {provinceOpen && (
+                <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border rounded-lg shadow-lg z-20">
+                  {filteredProvinces.length > 0 ? filteredProvinces.map(p => (
+                    <div key={p}
+                      onMouseDown={() => selectProvince(p)}
+                      className="p-2 text-sm hover:bg-emerald-50 cursor-pointer border-b">
+                      {provName(p)}
+                    </div>
+                  )) : (
+                    <div className="p-3 text-sm text-gray-500 text-center">ไม่พบจังหวัด</div>
+                  )}
+                </div>
+              )}
+              {province && <div className="text-xs text-emerald-600 mt-1">✓ {provName(province)}</div>}
             </div>
             <div>
               <label className="text-sm text-gray-700">{t("address")} <span className="text-red-500">*</span></label>
