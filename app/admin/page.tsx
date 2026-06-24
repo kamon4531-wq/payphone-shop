@@ -19,8 +19,12 @@ export default function AdminPage() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: u, password: p })
     });
-    if (r.ok) { const d = await r.json(); setMe(d.user); setAuthed(true); }
-    else setErr("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+    if (r.ok) {
+      const d = await r.json();
+      setMe(d.user);
+      setAuthed(true);
+      setTimeout(() => location.reload(), 300);
+    } else setErr("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
   }
 
   if (authed === null) return <div className="p-10 text-center">กำลังโหลด...</div>;
@@ -313,18 +317,12 @@ function OrdersTab() {
       setNewOrderFlash(true);
       setTimeout(() => setNewOrderFlash(false), 5000);
       document.title = `🔔 (${diff}) ออเดอร์ใหม่ - Admin`;
-      try {
-        if (Notification.permission === "granted") {
-          new Notification("📦 ออเดอร์ใหม่!", { body: `มีออเดอร์ใหม่ ${diff} รายการ` });
-        }
-      } catch {}
     }
     lastCountRef.current = newOrders.length;
   }
 
   useEffect(() => {
     load(false);
-    try { if (Notification.permission === "default") Notification.requestPermission(); } catch {}
     const interval = setInterval(() => load(true), 15000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
