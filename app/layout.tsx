@@ -5,20 +5,10 @@ export const metadata = {
   title: "PAY BY PA.PHONE",
   description: "แหล่งรวมอุปกรณ์มือถือที่ดีที่สุด",
   manifest: "/manifest.json",
-  themeColor: "#10b981",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "PAY BY PA.PHONE"
-  }
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "PAY BY PA.PHONE" }
 };
 
-export const viewport = {
-  themeColor: "#10b981",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1
-};
+export const viewport = { themeColor: "#10b981", width: "device-width", initialScale: 1, maximumScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -36,25 +26,54 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <Script id="sw-register" strategy="afterInteractive">{`
           if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-              navigator.serviceWorker.register('/sw.js').catch(() => {});
+            window.addEventListener('load', async () => {
+              try {
+                const reg = await navigator.serviceWorker.register('/public/sw.js');
+                
+                try {
+                  const meRes = await fetch('/api/admin/me');
+                  if (meRes.ok && 'PushManager' in window) {
+                    const perm = await Notification.requestPermission();
+                    if (perm === 'granted') {
+                      const existing = await reg.pushManager.getSubscription();
+                      if (!existing) {
+                        const vapid = '${process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''}';
+                        if (vapid) {
+                          const sub = await reg.pushManager.subscribe({
+                            userVisibleOnly: true,
+                            applicationServerKey: urlBase64ToUint8Array(vapid)
+                          });
+                          await fetch('/api/push/subscribe', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(sub)
+                          });
+                        }
+                      }
+                    }
+                  }
+                } catch (e) { console.warn('Push setup:', e); }
+              } catch (e) { console.warn('SW reg:', e); }
             });
+          }
+
+          function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+            return outputArray;
           }
 
           let deferredPrompt;
           window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            
             const btn = document.createElement('button');
             btn.innerHTML = '📱 ติดตั้งแอป';
-            btn.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#10b981;color:white;padding:12px 20px;border-radius:50px;font-weight:bold;border:none;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:9999;font-size:14px;cursor:pointer;animation:pulse 2s infinite';
+            btn.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#10b981;color:white;padding:12px 20px;border-radius:50px;font-weight:bold;border:none;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:9999;font-size:14px;cursor:pointer';
             btn.id = 'install-btn';
-            
-            const style = document.createElement('style');
-            style.textContent = '@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}';
-            document.head.appendChild(style);
-            
             btn.addEventListener('click', async () => {
               if (deferredPrompt) {
                 deferredPrompt.prompt();
@@ -63,7 +82,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 deferredPrompt = null;
               }
             });
-            
             document.body.appendChild(btn);
           });
 
