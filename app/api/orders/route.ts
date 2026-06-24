@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isAdmin } from "@/lib/auth";
 import { notifyBranch } from "@/lib/lineNotify";
+import { sendPushToBranch } from "@/lib/webpush";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -38,21 +39,19 @@ export async function POST(req: NextRequest) {
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // === Line Notification to Branch ===
   if (body.branch) {
     const branchCode = body.branch.split(":")[0];
-    const message = `🔔 ออเดอร์ใหม่!\n\n` +
-      `📦 ${orderNumber}\n` +
-      `👤 ${body.customer_name}\n` +
-      `📱 ${body.phone}\n` +
-      `🏬 ${body.branch}\n` +
-      `📦 ${body.product_name}\n` +
-      `💰 ฿${body.price.toLocaleString()}\n` +
-      (body.transfer_time ? `⏰ โอน: ${new Date(body.transfer_time).toLocaleString("th-TH")}\n` : "") +
-      (body.address ? `\n📍 ${body.address}` : "") +
-      (body.province ? `\n🗺 ${body.province}` : "");
+    
+    sendPushToBranch(branchCode, {
+      title: "📦 ออเดอร์ใหม่!",
+      body: `${body.customer_name} - ฿${body.price.toLocaleString()} - ${body.product_name}`,
+      url: "/admin",
+      tag: orderNumber
+    }).catch(e => console.error("Push failed:", e));
 
-    // Send in background (don't wait)
+    const message = `🔔 ออเดอร์ใหม่!\n\n📦 ${orderNumber}\n👤 ${body.customer_name}\n📱 ${body.phone}\n🏬 ${body.branch}\n📦 ${body.product_name}\n💰 ฿${body.price.toLocaleString()}\n` +
+      (body.transfer_time ? `⏰ โอน: ${new Date(body.transfer_time).toLocaleString("th-TH")}\n` : "") +
+      (body.address ? `\n📍 ${body.address}` : "");
     notifyBranch(branchCode, message).catch(e => console.error("Line notify failed:", e));
   }
 
