@@ -56,7 +56,7 @@ function PushButton() {
 
       setStatus("2/5 ลงทะเบียน Service Worker...");
       let reg = await navigator.serviceWorker.getRegistration();
-      if (!reg) reg = await navigator.serviceWorker.register('/public/sw.js');
+      if (!reg) reg = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
 
       setStatus("3/5 ขอ Permission...");
