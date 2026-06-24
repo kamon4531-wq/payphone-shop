@@ -35,20 +35,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   if (meRes.ok && 'PushManager' in window) {
                     const perm = await Notification.requestPermission();
                     if (perm === 'granted') {
-                      const existing = await reg.pushManager.getSubscription();
-                      if (!existing) {
+                      let sub = await reg.pushManager.getSubscription();
+                      if (!sub) {
                         const vapid = '${process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''}';
                         if (vapid) {
-                          const sub = await reg.pushManager.subscribe({
+                          sub = await reg.pushManager.subscribe({
                             userVisibleOnly: true,
                             applicationServerKey: urlBase64ToUint8Array(vapid)
                           });
-                          await fetch('/api/push/subscribe', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(sub)
-                          });
                         }
+                      }
+                      if (sub) {
+                        await fetch('/api/push/subscribe', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(sub)
+                        });
                       }
                     }
                   }
