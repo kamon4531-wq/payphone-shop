@@ -42,13 +42,20 @@ export async function POST(req: NextRequest) {
   if (body.branch) {
     const branchCode = body.branch.split(":")[0];
     
-    sendPushToBranch(branchCode, {
-      title: "📦 ออเดอร์ใหม่!",
-      body: `${body.customer_name} - ฿${body.price.toLocaleString()} - ${body.product_name}`,
-      url: "/admin",
-      tag: orderNumber
-    }).catch(e => console.error("Push failed:", e));
+    // Await push ให้เสร็จก่อน response (เพื่อให้ Vercel ไม่ kill ก่อนส่ง)
+    try {
+      await sendPushToBranch(branchCode, {
+        title: "📦 ออเดอร์ใหม่!",
+        body: `${body.customer_name} - ฿${body.price.toLocaleString()} - ${body.product_name}`,
+        url: "/admin",
+        tag: orderNumber
+      });
+      console.log("Push sent to", branchCode);
+    } catch (e: any) {
+      console.error("Push failed:", e.message || e);
+    }
 
+    // Line notify (fire and forget — ไม่ critical)
     const message = `🔔 ออเดอร์ใหม่!\n\n📦 ${orderNumber}\n👤 ${body.customer_name}\n📱 ${body.phone}\n🏬 ${body.branch}\n📦 ${body.product_name}\n💰 ฿${body.price.toLocaleString()}\n` +
       (body.transfer_time ? `⏰ โอน: ${new Date(body.transfer_time).toLocaleString("th-TH")}\n` : "") +
       (body.address ? `\n📍 ${body.address}` : "");
