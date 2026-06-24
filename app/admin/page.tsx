@@ -23,7 +23,6 @@ export default function AdminPage() {
       const d = await r.json();
       setMe(d.user);
       setAuthed(true);
-      setTimeout(() => location.reload(), 300);
     } else setErr("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
   }
 
@@ -46,6 +45,77 @@ export default function AdminPage() {
 const ROLE_LABEL: Record<string, string> = {
   owner: "Owner", hq_admin: "HQ Admin", region_manager: "Region Mgr", branch: "Branch"
 };
+
+function PushButton() {
+  const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function enable() {
+    setBusy(true);
+    setStatus("กำลังเปิด...");
+    try {
+      if (!('serviceWorker' in navigator)) { setStatus("❌ Browser ไม่รองรับ"); setBusy(false); return; }
+      if (!('PushManager' in window)) { setStatus("❌ Browser ไม่รองรับ Push"); setBusy(false); return; }
+
+      let reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
+        reg = await navigator.serviceWorker.register('/public/sw.js');
+        await navigator.serviceWorker.ready;
+      }
+
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { setStatus("❌ Permission: " + perm); setBusy(false); return; }
+
+      const vapidKey = "BLfx9RQtcW_Ef3yVfw8DRMdaBabB9JtExN7GSHZvAU0sMAzFwbKWlJm1V2lyAE1lz0TXLKSmyP-2hrmrYclzU44";
+      
+      function urlBase64ToUint8Array(base64String: string) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+        return outputArray;
+      }
+
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey)
+        });
+      }
+
+      const res = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub)
+      });
+
+      if (res.ok) {
+        setStatus("✅ เปิดสำเร็จ! ออเดอร์ใหม่จะเด้งมาที่มือถือนี้");
+      } else {
+        const t = await res.text();
+        setStatus("❌ API error: " + t);
+      }
+    } catch (e: any) {
+      setStatus("❌ Error: " + (e.message || "unknown"));
+    }
+    setBusy(false);
+  }
+
+  return (
+    <div className="mb-3 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="text-sm font-semibold">📱 รับ Push Notification</div>
+        <button onClick={enable} disabled={busy}
+          className="bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 text-white text-sm px-4 py-1.5 rounded font-semibold">
+          {busy ? "กำลัง..." : "🔔 เปิดแจ้งเตือน"}
+        </button>
+      </div>
+      {status && <div className="text-xs mt-2">{status}</div>}
+    </div>
+  );
+}
 
 function Dashboard({ me }: { me: any }) {
   const [tab, setTab] = useState<"products" | "orders">("orders");
@@ -76,6 +146,9 @@ function Dashboard({ me }: { me: any }) {
             className="text-sm text-red-500">ออกจากระบบ</button>
         </div>
       </header>
+
+      <PushButton />
+
       <div className="flex gap-2 mb-4 border-b">
         {canManageProducts && (
           <button onClick={() => setTab("products")}
@@ -312,11 +385,9 @@ function OrdersTab() {
     setOrders(newOrders);
     const prev = lastCountRef.current;
     if (prev !== null && newOrders.length > prev && notify) {
-      const diff = newOrders.length - prev;
       if (soundOnRef.current) playBeep();
       setNewOrderFlash(true);
       setTimeout(() => setNewOrderFlash(false), 5000);
-      document.title = `🔔 (${diff}) ออเดอร์ใหม่ - Admin`;
     }
     lastCountRef.current = newOrders.length;
   }
@@ -327,10 +398,6 @@ function OrdersTab() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!newOrderFlash) document.title = "Admin Dashboard";
-  }, [newOrderFlash]);
 
   function copyAddr(text: string) {
     navigator.clipboard.writeText(text);
@@ -382,28 +449,22 @@ function OrdersTab() {
     <div>
       {newOrderFlash && (
         <div className="bg-red-500 text-white p-3 rounded-lg mb-3 text-center font-bold animate-pulse">
-          🔔 ออเดอร์ใหม่เข้ามา!
+          🔔 ออเดอร์ใหม่!
         </div>
       )}
       <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">แสดง {filtered.length} / {orders.length} ออเดอร์</span>
-          <span className="text-xs text-gray-400">🔄 รีเฟรช 15 วิ</span>
-        </div>
+        <span className="text-sm text-gray-500">แสดง {filtered.length} / {orders.length}</span>
         <div className="flex gap-2 items-center flex-wrap">
           <button onClick={() => setSoundOn(!soundOn)}
             className={`text-sm px-3 py-1 rounded ${soundOn ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
-            {soundOn ? "🔊 เสียงเปิด" : "🔇 ปิดเสียง"}
+            {soundOn ? "🔊" : "🔇"}
           </button>
-          <button onClick={playBeep}
-            className="text-sm px-3 py-1 rounded bg-blue-100 text-blue-700">ทดสอบเสียง</button>
-          <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)}
-            className="border rounded px-2 py-1 text-sm">
+          <button onClick={playBeep} className="text-sm px-3 py-1 rounded bg-blue-100 text-blue-700">ทดสอบเสียง</button>
+          <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="border rounded px-2 py-1 text-sm">
             <option value="">ทุกสาขา</option>
             {branchList.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
-          <button onClick={exportCSV}
-            className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold">📥 Export</button>
+          <button onClick={exportCSV} className="bg-blue-500 text-white text-sm px-4 py-2 rounded-lg font-semibold">📥 Export</button>
         </div>
       </div>
       <div className="grid gap-2">
