@@ -62,6 +62,7 @@ function Dashboard({ me }: { me: any }) {
           )}
         </div>
         <div className="flex gap-3 items-center flex-wrap">
+          <a href="/admin/chat" className="text-sm text-blue-600 hover:underline">💬 แชท</a>
           {canManageProducts && <a href="/admin/qr" className="text-sm text-blue-600 hover:underline">📱 QR สาขา</a>}
           {canManageProducts && <a href="/admin/registrations" className="text-sm text-blue-600 hover:underline">📊 สถิติคลิก</a>}
           {isOwner && <a href="/admin/line-settings" className="text-sm text-blue-600 hover:underline">🔔 Line สาขา</a>}
@@ -389,7 +390,7 @@ function OrdersTab() {
       <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">แสดง {filtered.length} / {orders.length} ออเดอร์</span>
-          <span className="text-xs text-gray-400">🔄 รีเฟรชอัตโนมัติทุก 15 วินาที</span>
+          <span className="text-xs text-gray-400">🔄 รีเฟรช 15 วิ</span>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
           <button onClick={() => setSoundOn(!soundOn)}
@@ -404,7 +405,7 @@ function OrdersTab() {
             {branchList.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
           <button onClick={exportCSV}
-            className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold">📥 Export CSV</button>
+            className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-semibold">📥 Export</button>
         </div>
       </div>
       <div className="grid gap-2">
@@ -416,21 +417,17 @@ function OrdersTab() {
             </div>
             <div className="font-medium mt-1">{o.product_name}</div>
             <div className="text-sm">
-              ลูกค้า: <b>{o.customer_name}</b> · โทร: <a className="text-blue-500" href={`tel:${o.phone}`}>{o.phone}</a>
+              ลูกค้า: <b>{o.customer_name}</b> · <a className="text-blue-500" href={`tel:${o.phone}`}>{o.phone}</a>
               {o.province && <> · <span className="text-purple-600">{o.province}</span></>}
             </div>
-            {o.branch && (
-              <div className="text-sm mt-1">🏬 <b className="text-emerald-700">{o.branch}</b></div>
-            )}
+            {o.branch && <div className="text-sm mt-1">🏬 <b className="text-emerald-700">{o.branch}</b></div>}
             {o.address && (
               <div className="mt-2 bg-gray-50 p-2 rounded flex justify-between items-start gap-2">
                 <div className="text-xs text-gray-700 whitespace-pre-wrap flex-1">📦 {o.address}</div>
                 <button onClick={() => copyAddr(o.address!)} className="text-xs text-blue-500 shrink-0">คัดลอก</button>
               </div>
             )}
-            {o.transfer_time && (
-              <div className="text-xs text-gray-600 mt-1">⏰ โอนเวลา: {new Date(o.transfer_time).toLocaleString("th-TH")}</div>
-            )}
+            {o.transfer_time && <div className="text-xs text-gray-600 mt-1">⏰ {new Date(o.transfer_time).toLocaleString("th-TH")}</div>}
             <div className="flex items-center justify-between mt-2">
               <div className="text-emerald-600 font-bold">฿{o.price.toLocaleString()}</div>
               <div className="flex gap-2 items-center">
