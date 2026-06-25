@@ -8,7 +8,7 @@ const RICH_MENU = [
   { title: "โปรโมชั่น",      sub: "ดีลเด็ด ส่วนลดพิเศษ",       href: "/shop",     color: "from-orange-400 to-orange-600", icon: "🎁" },
   { title: "ออเดอร์ของฉัน",  sub: "เช็คสถานะคำสั่งซื้อ",         href: "/track",    color: "from-purple-500 to-purple-700", icon: "📦" },
   { title: "หาสาขา",         sub: "ค้นหาสาขาใกล้คุณ",           href: "/branches", color: "from-pink-500 to-rose-600",     icon: "📍" },
-  { title: "ติดต่อสอบถาม",  sub: "แชทสอบถาม 24 ชั่วโมง",       href: "__chat__",  color: "from-cyan-500 to-teal-600",     icon: "💬" },
+  { title: "ติดต่อสอบถาม",  sub: "แชทสอบถาม 24 ชั่วโมง",       href: "/contact",  color: "from-cyan-500 to-teal-600",     icon: "💬" },
 ];
 
 type Msg = { id: string; role: "shop" | "me"; text: string; time: string };
@@ -54,14 +54,13 @@ export default function Home() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, menuOpen]);
 
-  function openChat() { setMenuOpen(false); setTimeout(() => inputRef.current?.focus(), 100); }
   function send() {
     if (!msg.trim()) return;
     const t = msg.trim();
     setMessages(m => [...m, { id: Date.now()+"u", role: "me", text: t, time: now() }]);
     setMsg("");
     setTimeout(() => {
-      setMessages(m => [...m, { id: Date.now()+"s", role: "shop", text: "ขอบคุณที่ติดต่อค่ะ พนักงานสาขาจะตอบกลับเร็วๆ นี้ 🙏", time: now() }]);
+      setMessages(m => [...m, { id: Date.now()+"s", role: "shop", text: "ขอบคุณที่ติดต่อค่ะ ถ้าต้องการคุยกับสาขา กดปุ่ม \"ติดต่อสอบถาม\" ในเมนูด้านล่างนะคะ 🙏", time: now() }]);
     }, 800);
   }
 
@@ -133,23 +132,15 @@ export default function Home() {
         <div className="bg-white border-t shadow-2xl">
           <div className="grid grid-cols-2 gap-2 p-3">
             {RICH_MENU.map(b => (
-              b.href === "__chat__" ? (
-                <button key={b.title} onClick={openChat} className={`bg-gradient-to-br ${b.color} text-white rounded-2xl py-4 px-3 text-left active:scale-95 transition shadow`}>
-                  <div className="text-3xl mb-1">{b.icon}</div>
-                  <div className="text-sm font-bold leading-tight">{b.title}</div>
-                  <div className="text-[10px] opacity-90 leading-tight mt-0.5">{b.sub}</div>
-                </button>
-              ) : (
-                <Link key={b.title} href={b.href} className={`bg-gradient-to-br ${b.color} text-white rounded-2xl py-4 px-3 text-left active:scale-95 transition shadow`}>
-                  <div className="text-3xl mb-1">{b.icon}</div>
-                  <div className="text-sm font-bold leading-tight">{b.title}</div>
-                  <div className="text-[10px] opacity-90 leading-tight mt-0.5">{b.sub}</div>
-                </Link>
-              )
+              <Link key={b.title} href={b.href} className={`bg-gradient-to-br ${b.color} text-white rounded-2xl py-4 px-3 text-left active:scale-95 transition shadow`}>
+                <div className="text-3xl mb-1">{b.icon}</div>
+                <div className="text-sm font-bold leading-tight">{b.title}</div>
+                <div className="text-[10px] opacity-90 leading-tight mt-0.5">{b.sub}</div>
+              </Link>
             ))}
           </div>
           <div className="flex items-center gap-2 px-3 py-2 border-t bg-gray-50">
-            <button onClick={openChat} className="w-9 h-9 rounded-md bg-gray-200 text-gray-700 flex items-center justify-center hover:bg-gray-300" title="พิมพ์ข้อความ">⌨️</button>
+            <button onClick={() => { setMenuOpen(false); setTimeout(() => inputRef.current?.focus(), 100); }} className="w-9 h-9 rounded-md bg-gray-200 text-gray-700 flex items-center justify-center hover:bg-gray-300" title="พิมพ์ข้อความ">⌨️</button>
             <button onClick={() => setMenuOpen(false)} className="flex-1 text-gray-700 text-sm font-bold py-2 text-center hover:bg-gray-100 rounded">Menu ▼</button>
           </div>
         </div>
