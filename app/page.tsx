@@ -25,14 +25,37 @@ export default function Home() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [showInstall, setShowInstall] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    if (isStandalone) return;
+    const ua = window.navigator.userAgent;
+    setIsIOS(/iPhone|iPad|iPod/.test(ua));
+    const handler = (e: any) => { e.preventDefault(); setDeferredPrompt(e); };
+    window.addEventListener("beforeinstallprompt", handler);
+    const t = setTimeout(() => setShowInstall(true), 800);
+    return () => { window.removeEventListener("beforeinstallprompt", handler); clearTimeout(t); };
+  }, []);
+
+  async function installApp() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") setShowInstall(false);
+      setDeferredPrompt(null);
+    }
+  }
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, menuOpen]);
 
-  function openChat() {
-    setMenuOpen(false);
-    setTimeout(() => inputRef.current?.focus(), 100);
-  }
+  function openChat() { setMenuOpen(false); setTimeout(() => inputRef.current?.focus(), 100); }
   function send() {
     if (!msg.trim()) return;
     const t = msg.trim();
@@ -45,6 +68,42 @@ export default function Home() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-gradient-to-br from-gray-50 to-emerald-50">
+      {showInstall && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl">
+            <div className="text-center mb-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="PA.PHONE" className="w-20 h-20 mx-auto object-contain"/>
+              <h2 className="text-xl font-bold mt-2 text-gray-900">ติดตั้งแอป PA.PHONE</h2>
+              <p className="text-sm text-gray-600 mt-1">เพิ่มลงหน้าจอมือถือ ใช้งานสะดวกเหมือนแอปจริง</p>
+            </div>
+            {isIOS ? (
+              <div className="bg-blue-50 rounded-2xl p-4 text-sm text-gray-800 space-y-2 leading-relaxed">
+                <div className="font-bold text-blue-700">📱 สำหรับ iPhone (Safari):</div>
+                <div>1. กดปุ่ม <b>Share</b> ⬆️ ด้านล่างของ Safari</div>
+                <div>2. เลื่อนหา <b>"เพิ่มลงในหน้าจอโฮม"</b></div>
+                <div>3. กด <b>"เพิ่ม"</b> มุมขวาบน</div>
+                <div>4. ไอคอน PA.PHONE จะอยู่บนหน้าจอ</div>
+              </div>
+            ) : deferredPrompt ? (
+              <button onClick={installApp} className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold py-3 rounded-2xl shadow active:scale-95 transition">
+                📲 ติดตั้งแอปทันที
+              </button>
+            ) : (
+              <div className="bg-blue-50 rounded-2xl p-4 text-sm text-gray-800 space-y-2 leading-relaxed">
+                <div className="font-bold text-blue-700">📱 สำหรับ Android (Chrome):</div>
+                <div>1. กดปุ่ม <b>⋮</b> (จุด 3 จุด) มุมขวาบน</div>
+                <div>2. เลือก <b>"ติดตั้งแอป"</b> หรือ <b>"เพิ่มลงหน้าจอหลัก"</b></div>
+                <div>3. กด <b>"ติดตั้ง"</b></div>
+              </div>
+            )}
+            <button onClick={() => setShowInstall(false)} className="w-full mt-4 text-gray-500 text-sm py-2 hover:text-gray-700">
+              ใช้งานบนเว็บก่อน
+            </button>
+          </div>
+        </div>
+      )}
+
       <header className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-3 flex items-center gap-3 shadow">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="PA" className="w-10 h-10 rounded-full bg-white object-contain shadow"/>
