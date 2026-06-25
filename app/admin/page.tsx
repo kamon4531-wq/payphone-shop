@@ -229,27 +229,58 @@ function OrdersTab() {
   const [viewSlip, setViewSlip] = useState<string | null>(null);
   const [branchFilter, setBranchFilter] = useState("");
   const [soundOn, setSoundOn] = useState(true);
-  const [newOrderFlash, setNewOrderFlash] = useState(false);
+  const [ringing, setRinging] = useState(false);
+  const [pendingOrderName, setPendingOrderName] = useState("");
   const lastCountRef = useRef<number | null>(null);
   const soundOnRef = useRef(true);
+  const ringIntervalRef = useRef<any>(null);
+  const audioCtxRef = useRef<any>(null);
   useEffect(() => { soundOnRef.current = soundOn; }, [soundOn]);
 
   function playBeep() {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioCtxRef.current = ctx;
       const o = ctx.createOscillator(); const g = ctx.createGain();
       o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = 880; g.gain.value = 0.3; o.start();
+      o.frequency.value = 880; g.gain.value = 0.4; o.start();
       setTimeout(() => { o.frequency.value = 1320; }, 150);
-      setTimeout(() => { o.stop(); ctx.close(); }, 350);
+      setTimeout(() => { o.frequency.value = 880; }, 300);
+      setTimeout(() => { o.frequency.value = 1320; }, 450);
+      setTimeout(() => { o.stop(); ctx.close(); }, 700);
     } catch {}
   }
 
+  function startRinging(orderName: string) {
+    if (ringIntervalRef.current) return;
+    setRinging(true);
+    setPendingOrderName(orderName);
+    playBeep();
+    ringIntervalRef.current = setInterval(() => {
+      if (soundOnRef.current) playBeep();
+    }, 1200);
+  }
+
+  function stopRinging() {
+    if (ringIntervalRef.current) {
+      clearInterval(ringIntervalRef.current);
+      ringIntervalRef.current = null;
+    }
+    setRinging(false);
+    setPendingOrderName("");
+    try { audioCtxRef.current?.close(); } catch {}
+  }
+
+  useEffect(() => () => stopRinging(), []);
+
   async function load(notify = true) {
     const r = await fetch("/api/orders/list"); const d = await r.json();
-    const newOrders = d.orders || []; setOrders(newOrders);
+    const newOrders: Order[] = d.orders || []; setOrders(newOrders);
     const prev = lastCountRef.current;
-    if (prev !== null && newOrders.length > prev && notify) { if (soundOnRef.current) playBeep(); setNewOrderFlash(true); setTimeout(() => setNewOrderFlash(false), 5000); }
+    if (prev !== null && newOrders.length > prev && notify) {
+      const latest = newOrders[0];
+      startRinging(latest?.product_name || "ออเดอร์ใหม่");
+    }
     lastCountRef.current = newOrders.length;
   }
   useEffect(() => { load(false); const i = setInterval(() => load(true), 15000); return () => clearInterval(i); /* eslint-disable-line */ }, []);
@@ -271,12 +302,26 @@ function OrdersTab() {
 
   return (
     <div>
-      {newOrderFlash && <div className="bg-red-500 text-white p-3 rounded-lg mb-3 text-center font-bold animate-pulse">🔔 ออเดอร์ใหม่!</div>}
+      {ringing && (
+        <div className="fixed inset-0 z-50 bg-red-600/95 flex flex-col items-center justify-center p-6 animate-pulse">
+          <div className="text-9xl mb-4">🔔</div>
+          <div className="text-white text-4xl font-extrabold mb-2 text-center">ออเดอร์ใหม่!</div>
+          <div className="text-white text-xl text-center mb-6 max-w-md">{pendingOrderName}</div>
+          <button
+            onClick={stopRinging}
+            className="bg-white text-red-700 text-2xl font-bold py-4 px-10 rounded-2xl shadow-xl active:scale-95 transition"
+          >
+            ✓ รับทราบ
+          </button>
+          <div className="text-white/80 text-xs mt-4">เสียงจะดังไปเรื่อยๆ จนกว่าจะกดรับทราบ</div>
+        </div>
+      )}
       <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
         <span className="text-sm text-gray-500">{filtered.length} / {orders.length}</span>
         <div className="flex gap-2 items-center flex-wrap">
           <button onClick={() => setSoundOn(!soundOn)} className={`text-sm px-3 py-1 rounded ${soundOn ? "bg-green-100 text-green-700" : "bg-gray-200"}`}>{soundOn ? "🔊" : "🔇"}</button>
           <button onClick={playBeep} className="text-sm px-3 py-1 rounded bg-blue-100 text-blue-700">ทดสอบเสียง</button>
+          <button onClick={() => startRinging("ทดสอบเสียงดังต่อเนื่อง")} className="text-sm px-3 py-1 rounded bg-orange-100 text-orange-700">ทดสอบเสียงวน</button>
           <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="border rounded px-2 py-1 text-sm">
             <option value="">ทุกสาขา</option>{branchList.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
