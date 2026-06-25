@@ -34,8 +34,7 @@ export default function Home() {
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
     if (isStandalone) return;
-    const ua = window.navigator.userAgent;
-    setIsIOS(/iPhone|iPad|iPod/.test(ua));
+    setIsIOS(/iPhone|iPad|iPod/.test(window.navigator.userAgent));
     const handler = (e: any) => { e.preventDefault(); setDeferredPrompt(e); };
     window.addEventListener("beforeinstallprompt", handler);
     const t = setTimeout(() => setShowInstall(true), 800);
