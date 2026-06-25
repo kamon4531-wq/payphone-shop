@@ -11,6 +11,17 @@ function optImg(url: string, w: number) {
   return url;
 }
 
+function detectBundle(product: Product): { is1plus1: boolean; label: string } {
+  const badge = (product.badge_text || "").toLowerCase();
+  const name = (product.name || "").toLowerCase();
+  const desc = (product.description || "").toLowerCase();
+  const all = badge + " " + name + " " + desc;
+  if (/1\s*\+\s*1|1\s*แถม\s*1|buy\s*1\s*get\s*1|ซื้อ\s*1\s*แถม\s*1/.test(all)) {
+    return { is1plus1: true, label: "🎁 ซื้อ 1 แถม 1 (รับสินค้า 2 ชิ้น)" };
+  }
+  return { is1plus1: false, label: "" };
+}
+
 export default function OrderModal({
   product, onClose
 }: { product: Product | null; onClose: () => void }) {
@@ -45,13 +56,14 @@ export default function OrderModal({
   const filteredProvinces = useMemo(() => {
     if (!provinceSearch) return THAI_PROVINCES;
     const q = provinceSearch.toLowerCase();
-    return THAI_PROVINCES.filter(p => 
+    return THAI_PROVINCES.filter(p =>
       p.toLowerCase().includes(q) || provName(p).toLowerCase().includes(q)
     );
   }, [provinceSearch, provName]);
 
   if (!product) return null;
 
+  const bundle = detectBundle(product);
   const images = [product.image_url, product.image_url2, product.image_url3].filter(Boolean) as string[];
   const badge = product.badge_text && product.badge_text !== "null" ? product.badge_text : null;
   const currentImg = images[imgIdx];
@@ -67,12 +79,16 @@ export default function OrderModal({
     if (!up.ok) { alert("Upload failed"); setLoading(false); return; }
     const slipData = await up.json();
 
+    const finalProductName = bundle.is1plus1
+      ? `${product!.name} [1แถม1 = 2 ชิ้น]`
+      : product!.name;
+
     const r = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         product_id: product!.id,
-        product_name: product!.name,
+        product_name: finalProductName,
         price: product!.price,
         customer_name: name,
         phone, address, province, branch,
@@ -125,6 +141,11 @@ export default function OrderModal({
             <div className="text-5xl mb-3">✅</div>
             <p className="font-semibold">{t("thankYou")}</p>
             <p className="text-sm text-gray-600 mt-2">{t("willContact")}</p>
+            {bundle.is1plus1 && (
+              <div className="mt-3 bg-orange-100 border-2 border-orange-400 rounded-lg p-3 text-orange-800 font-bold">
+                {bundle.label}
+              </div>
+            )}
             <button onClick={onClose} className="mt-4 bg-emerald-500 text-white px-6 py-2 rounded-lg">{t("close")}</button>
           </div>
         )}
@@ -175,6 +196,11 @@ export default function OrderModal({
             )}
             <div className="p-4 space-y-3">
               <h2 className="text-lg font-bold">{product.name}</h2>
+              {bundle.is1plus1 && (
+                <div className="bg-orange-100 border-2 border-orange-400 rounded-lg p-3 text-center text-orange-800 font-bold">
+                  {bundle.label}
+                </div>
+              )}
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-emerald-600">฿{product.price.toLocaleString()}</span>
                 {product.old_price && <span className="text-sm text-gray-400 line-through">฿{product.old_price.toLocaleString()}</span>}
@@ -195,6 +221,11 @@ export default function OrderModal({
 
         {step==="info" && (
           <form onSubmit={e=>{e.preventDefault(); if(!branch){alert("กรุณาเลือกสาขา"); return;} if(!province){alert("กรุณาเลือกจังหวัด"); return;} setStep("pay");}} className="p-4 space-y-3 overflow-y-auto">
+            {bundle.is1plus1 && (
+              <div className="bg-orange-100 border-2 border-orange-400 rounded-lg p-2 text-center text-orange-800 font-bold text-sm">
+                {bundle.label}
+              </div>
+            )}
             <div>
               <label className="text-sm text-gray-700">{t("fullName")} <span className="text-red-500">*</span></label>
               <input required value={name} onChange={e=>setName(e.target.value)}
@@ -270,6 +301,11 @@ export default function OrderModal({
 
         {step==="pay" && (
           <form onSubmit={submit} className="p-4 space-y-3 overflow-y-auto">
+            {bundle.is1plus1 && (
+              <div className="bg-orange-100 border-2 border-orange-400 rounded-lg p-2 text-center text-orange-800 font-bold text-sm">
+                {bundle.label}
+              </div>
+            )}
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
               <div className="text-xs text-gray-600">{t("amountToTransfer")}</div>
               <div className="text-2xl font-bold text-emerald-600">฿{product.price.toLocaleString()}</div>
