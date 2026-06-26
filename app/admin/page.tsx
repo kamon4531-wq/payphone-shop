@@ -241,13 +241,32 @@ function OrdersTab() {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       audioCtxRef.current = ctx;
-      const o = ctx.createOscillator(); const g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = 880; g.gain.value = 0.4; o.start();
-      setTimeout(() => { o.frequency.value = 1320; }, 150);
-      setTimeout(() => { o.frequency.value = 880; }, 300);
-      setTimeout(() => { o.frequency.value = 1320; }, 450);
-      setTimeout(() => { o.stop(); ctx.close(); }, 700);
+      const master = ctx.createGain();
+      master.gain.value = 1.0;
+      master.connect(ctx.destination);
+      // Siren: 3 oscillators (square wave = louder/harsher) at different freqs
+      const freqs = [880, 1320, 1760];
+      const oscs: OscillatorNode[] = [];
+      for (const f of freqs) {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = "square";
+        o.frequency.value = f;
+        g.gain.value = 0.5;
+        o.connect(g); g.connect(master);
+        o.start();
+        oscs.push(o);
+      }
+      // Siren sweep
+      setTimeout(() => { oscs.forEach((o, i) => { o.frequency.value = [1320, 880, 1320][i]; }); }, 150);
+      setTimeout(() => { oscs.forEach((o, i) => { o.frequency.value = [880, 1760, 880][i]; }); }, 300);
+      setTimeout(() => { oscs.forEach((o, i) => { o.frequency.value = [1760, 1320, 1320][i]; }); }, 450);
+      setTimeout(() => { oscs.forEach((o, i) => { o.frequency.value = [880, 1320, 1760][i]; }); }, 600);
+      setTimeout(() => { oscs.forEach(o => o.stop()); ctx.close(); }, 900);
+      // Vibration (Android)
+      if ("vibrate" in navigator) {
+        try { navigator.vibrate([300, 100, 300, 100, 300]); } catch {}
+      }
     } catch {}
   }
 
