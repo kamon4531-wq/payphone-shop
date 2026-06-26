@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BRANCHES } from "@/lib/types";
 
 type Msg = {
@@ -9,10 +9,22 @@ type Msg = {
   created_at: string;
 };
 
+function getOrCreateSessionId(): string {
+  if (typeof window === "undefined") return "";
+  let id = localStorage.getItem("chatSessionId");
+  if (!id) {
+    id = "C" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem("chatSessionId", id);
+  }
+  return id;
+}
+
 export default function ContactPage() {
   const [step, setStep] = useState<"setup" | "chat">("setup");
   const [branch, setBranch] = useState("");
-  const [phone, setPhone] = useState("");
+  const [branchSearch, setBranchSearch] = useState("");
+  const [branchOpen, setBranchOpen] = useState(false);
+  const [sessionId, setSessionId] = useState("");
   const [name, setName] = useState("");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -21,17 +33,28 @@ export default function ContactPage() {
   const branchCode = branch.split(":")[0];
 
   useEffect(() => {
+    const sid = getOrCreateSessionId();
+    setSessionId(sid);
     const saved = typeof window !== "undefined" ? localStorage.getItem("chatSetup") : null;
     if (saved) {
-      const s = JSON.parse(saved);
-      setBranch(s.branch); setPhone(s.phone); setName(s.name);
-      setStep("chat");
+      try {
+        const s = JSON.parse(saved);
+        if (s.branch) { setBranch(s.branch); setBranchSearch(s.branch); }
+        if (s.name) setName(s.name);
+        if (s.branch) setStep("chat");
+      } catch {}
     }
   }, []);
 
+  const filteredBranches = useMemo(() => {
+    if (!branchSearch) return BRANCHES;
+    const q = branchSearch.toLowerCase();
+    return BRANCHES.filter(b => b.name.toLowerCase().includes(q));
+  }, [branchSearch]);
+
   async function loadMessages() {
-    if (!branchCode || !phone) return;
-    const r = await fetch(`/api/chat/messages?branch=${branchCode}&phone=${phone}`);
+    if (!branchCode || !sessionId) return;
+    const r = await fetch(`/api/chat/messages?branch=${branchCode}&phone=${encodeURIComponent(sessionId)}`);
     const d = await r.json();
     setMessages(d.messages || []);
     setTimeout(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -43,12 +66,12 @@ export default function ContactPage() {
     const interval = setInterval(loadMessages, 5000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, branchCode, phone]);
+  }, [step, branchCode, sessionId]);
 
   function startChat(e: React.FormEvent) {
     e.preventDefault();
-    if (!branch || !phone) return;
-    localStorage.setItem("chatSetup", JSON.stringify({ branch, phone, name }));
+    if (!branch || !name) return;
+    localStorage.setItem("chatSetup", JSON.stringify({ branch, name }));
     setStep("chat");
   }
 
@@ -61,7 +84,7 @@ export default function ContactPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         branch_code: branchCode,
-        customer_phone: phone,
+        customer_phone: sessionId,
         customer_name: name,
         sender: "customer",
         message: input.trim()
@@ -78,6 +101,12 @@ export default function ContactPage() {
     setMessages([]);
   }
 
+  function selectBranch(n: string) {
+    setBranch(n);
+    setBranchSearch(n);
+    setBranchOpen(false);
+  }
+
   if (step === "setup") {
     return (
       <main className="min-h-screen bg-gradient-to-br from-cyan-50 to-teal-100 p-4">
@@ -89,28 +118,35 @@ export default function ContactPage() {
 
           <form onSubmit={startChat} className="bg-white p-6 rounded-xl shadow space-y-4">
             <div>
-              <label className="text-sm font-semibold">ชื่อ-นามสกุล *</label>
+              <label className="text-sm font-semibold">ชื่อ <span className="text-red-500">*</span></label>
               <input required value={name} onChange={e => setName(e.target.value)}
-                className="w-full border rounded-lg p-2 mt-1"/>
-            </div>
-            <div>
-              <label className="text-sm font-semibold">เบอร์โทร *</label>
-              <input required value={phone} onChange={e => setPhone(e.target.value)}
-                pattern="[0-9]{9,10}" inputMode="numeric"
                 className="w-full border rounded-lg p-2 mt-1"
-                placeholder="0XXXXXXXXX"/>
+                placeholder="กรอกชื่อของคุณ"/>
             </div>
-            <div>
-              <label className="text-sm font-semibold">เลือกสาขา *</label>
-              <select required value={branch} onChange={e => setBranch(e.target.value)}
-                className="w-full border rounded-lg p-2 mt-1">
-                <option value="">เลือกสาขาที่ต้องการสอบถาม</option>
-                {BRANCHES.map(b => (
-                  <option key={b.name} value={b.name}>{b.region} · {b.name}</option>
-                ))}
-              </select>
+            <div className="relative">
+              <label className="text-sm font-semibold">เลือกสาขา <span className="text-red-500">*</span></label>
+              <input type="text" value={branchSearch}
+                onChange={e => { setBranchSearch(e.target.value); setBranch(""); setBranchOpen(true); }}
+                onFocus={() => setBranchOpen(true)}
+                onBlur={() => setTimeout(() => setBranchOpen(false), 200)}
+                className="w-full border rounded-lg p-2 mt-1"
+                placeholder="🔍 พิมพ์ชื่อสาขาเพื่อค้นหา"/>
+              {branchOpen && (
+                <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border rounded-lg shadow-lg z-20">
+                  {filteredBranches.length > 0 ? filteredBranches.map(b => (
+                    <div key={b.name}
+                      onMouseDown={() => selectBranch(b.name)}
+                      className="p-2 text-sm hover:bg-cyan-50 cursor-pointer border-b">
+                      <span className="text-xs text-gray-500 mr-2">{b.region}</span>{b.name}
+                    </div>
+                  )) : (
+                    <div className="p-3 text-sm text-gray-500 text-center">ไม่พบสาขา</div>
+                  )}
+                </div>
+              )}
+              {branch && <div className="text-xs text-cyan-600 mt-1">✓ {branch}</div>}
             </div>
-            <button className="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 rounded-lg">
+            <button disabled={!branch || !name} className="w-full bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-white font-bold py-3 rounded-lg">
               เริ่มแชท
             </button>
           </form>
@@ -123,7 +159,7 @@ export default function ContactPage() {
     <main className="h-screen flex flex-col bg-gray-50">
       <header className="bg-cyan-500 text-white p-4 shadow flex items-center justify-between">
         <div>
-          <div className="text-xs opacity-80">{branchCode}</div>
+          <div className="text-xs opacity-80">{branchCode} · {name}</div>
           <div className="font-bold">{branch.split(":")[1] || branch}</div>
         </div>
         <button onClick={reset} className="text-xs underline">เปลี่ยนสาขา</button>
@@ -138,8 +174,8 @@ export default function ContactPage() {
         {messages.map(m => (
           <div key={m.id} className={`flex ${m.sender === "customer" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[80%] px-4 py-2 rounded-2xl ${
-              m.sender === "customer" 
-                ? "bg-cyan-500 text-white rounded-br-sm" 
+              m.sender === "customer"
+                ? "bg-cyan-500 text-white rounded-br-sm"
                 : "bg-white shadow rounded-bl-sm"
             }`}>
               <div className="text-sm">{m.message}</div>
