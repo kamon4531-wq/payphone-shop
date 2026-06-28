@@ -7,7 +7,7 @@ const SYSTEM_PROMPT = `คุณคือผู้ช่วยขายของ
 - ใส่ราคา (฿) ทุกครั้งที่แนะนำ
 - ถ้าลูกค้าถามนอกเหนือสินค้า ให้แนะนำให้ติดต่อสาขา
 - ไม่ต้องเดาราคาสินค้าที่ไม่มีในข้อมูล
-- เมื่อแนะนำสินค้า ใส่ชื่อสินค้าให้ลูกค้ากด "สั่งซื้อ" ได้
+- เมื่อแนะนำสินค้า ใส่ชื่อสินค้าตรงๆ จากรายการ
 - รูปแบบตอบ: ข้อความสั้น 2-3 บรรทัด + รายการสินค้า`;
 
 export async function POST(req: NextRequest) {
@@ -25,7 +25,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AI not configured" }, { status: 500 });
     }
 
-    // Load products
     const { data: products } = await supabaseAdmin()
       .from("products")
       .select("id, name, category, price, old_price, description")
@@ -41,7 +40,6 @@ export async function POST(req: NextRequest) {
 === สินค้าในร้าน (${products?.length || 0} รายการ) ===
 ${productList}`;
 
-    // Build Gemini contents
     const contents = [
       ...history.slice(-10).map(h => ({
         role: h.role === "user" ? "user" : "model",
@@ -54,17 +52,14 @@ ${productList}`;
     ];
 
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           system_instruction: { parts: [{ text: fullSystem }] },
           contents,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 800,
-          }
+          generationConfig: { temperature: 0.7, maxOutputTokens: 800 }
         })
       }
     );
@@ -77,19 +72,13 @@ ${productList}`;
     const data = await geminiRes.json();
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "ขออภัย ระบบไม่สามารถตอบได้ในขณะนี้";
 
-    // Try to detect product mentions in reply
-    const mentionedProducts = (products || []).filter(p =>
-      reply.includes(p.name)
-    ).slice(0, 5);
+    const mentionedProducts = (products || []).filter(p => reply.includes(p.name)).slice(0, 5);
 
     return NextResponse.json({
       ok: true,
       reply,
       products: mentionedProducts.map(p => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        old_price: p.old_price
+        id: p.id, name: p.name, price: p.price, old_price: p.old_price
       }))
     });
   } catch (e: any) {
