@@ -6,8 +6,7 @@ import { useLang } from "@/lib/i18n";
 function optImg(url: string, w: number) {
   if (!url) return "";
   if (url.includes("cloudinary.com") && url.includes("/upload/")) {
-    return url.replace("/upload/", `/upload/f_auto,q_auto,w_${w}/`);
-  }
+return url.replace("/upload/", `/upload/f_auto,q_auto,w_${w}/`).replace(/\.(png|jpe?g|webp|jxl|gif|avif)$/i, "");  }
   return url;
 }
 
