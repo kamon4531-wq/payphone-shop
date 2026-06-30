@@ -69,9 +69,13 @@ export default function ProductCard({ p, onBuy, onAdd }: { p: Product; onBuy: (p
             <button
               onClick={() => onAdd(p)}
               title="ใส่ตะกร้า"
-              className="bg-emerald-500 hover:bg-emerald-600 text-white text-base rounded-lg px-3 font-medium"
+              aria-label="ใส่ตะกร้า"
+              className="rounded-lg px-3 flex items-center justify-center active:scale-95 transition"
+              style={{ backgroundColor: "#ee4d2d" }}
             >
-              🛒
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="#ffffff" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17M17 13v0M9 19a1 1 0 11-2 0 1 1 0 012 0zm8 0a1 1 0 11-2 0 1 1 0 012 0z" />
+              </svg>
             </button>
           )}
         </div>
