@@ -305,9 +305,22 @@ export default function OrderModal({
                 {bundle.label}
               </div>
             )}
-            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
-              <div className="text-xs text-gray-600">{t("amountToTransfer")}</div>
-              <div className="text-2xl font-bold text-emerald-600">฿{product.price.toLocaleString()}</div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-1">
+              <div className="flex justify-between text-sm text-gray-700">
+                <span>ราคาสินค้า</span>
+                <span>฿{product.price.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-700">
+                <span>ค่าจัดส่ง</span>
+                <span>{product.price >= 200 ? "ส่งฟรี 🎉" : "฿15"}</span>
+              </div>
+              <div className="flex justify-between items-center border-t border-emerald-200 pt-2 mt-1">
+                <span className="text-sm font-semibold">ยอดที่ต้องโอน</span>
+                <span className="text-2xl font-bold text-emerald-600">฿{(product.price + (product.price >= 200 ? 0 : 15)).toLocaleString()}</span>
+              </div>
+              {product.price < 200 && (
+                <div className="text-xs text-orange-500 text-center pt-1">💡 ซื้อครบ ฿200 ส่งฟรี!</div>
+              )}
             </div>
             <div className="bg-gray-50 p-3 rounded-lg text-center">
               <div className="text-sm font-semibold mb-2">{t("scanQR")}</div>
