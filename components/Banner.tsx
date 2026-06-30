@@ -1,10 +1,16 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const SLIDES = ["/banner1.png", "/banner2.png", "/banner3.png"];
 
 export default function Banner() {
   const [i, setI] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setI(x => (x + 1) % SLIDES.length), 4000);
+    return () => clearInterval(t);
+  }, []);
+
   return (
     <div className="relative rounded-2xl overflow-hidden aspect-[16/9] bg-gray-100">
       {SLIDES.map((src, idx) => (
