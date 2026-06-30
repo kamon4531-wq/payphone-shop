@@ -360,7 +360,7 @@ function OrdersTab() {
             {o.address && <div className="mt-2 bg-gray-50 p-2 rounded flex justify-between items-start gap-2"><div className="text-xs text-gray-700 whitespace-pre-wrap flex-1">📦 {o.address}</div><button onClick={() => copyAddr(o.address!)} className="text-xs text-blue-500 shrink-0">คัดลอก</button></div>}
             {o.transfer_time && <div className="text-xs text-gray-600 mt-1">⏰ {new Date(o.transfer_time).toLocaleString("th-TH")}</div>}
             <div className="flex items-center justify-between mt-2">
-              <div className="text-emerald-600 font-bold">฿{o.price.toLocaleString()}</div>
+              <div><div className="text-emerald-600 font-bold">ต้องได้รับ ฿{(o.price + (o.price >= 200 ? 0 : 15)).toLocaleString()}</div><div className="text-xs text-gray-500">สินค้า ฿{o.price.toLocaleString()} {o.price >= 200 ? "· ส่งฟรี" : "· ค่าส่ง ฿15"}</div></div>
               <div className="flex gap-2 items-center">
                 {o.slip_url ? (<>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={o.slip_url} alt="slip" onClick={() => setViewSlip(o.slip_url)} className="w-12 h-12 object-cover rounded border cursor-pointer"/><button onClick={() => delSlip(o.id)} className="text-xs text-orange-500">ลบสลิป</button></>) : <span className="text-xs text-gray-400">ไม่มีสลิป</span>}
                 <button onClick={() => delOrder(o.id)} className="text-xs text-red-500">ลบ</button>
