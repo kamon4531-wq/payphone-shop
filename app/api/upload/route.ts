@@ -3,6 +3,10 @@ import crypto from "crypto";
 
 export const runtime = "nodejs";
 
+const OWNER = "kamon4531-wq";
+const REPO = "payphone-images";
+const BRANCH = "main";
+
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const file = form.get("file") as File | null;
@@ -12,27 +16,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "file too large (max 10MB)" }, { status: 400 });
   }
 
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME!;
-  const apiKey = process.env.CLOUDINARY_API_KEY!;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET!;
-
-  const timestamp = Math.round(Date.now() / 1000);
-  const paramsToSign = `timestamp=${timestamp}`;
-  const signature = crypto.createHash("sha1").update(paramsToSign + apiSecret).digest("hex");
+  const token = process.env.GITHUB_IMAGE_TOKEN!;
+  const ext = ((file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "")) || "png";
+  const id = crypto.randomBytes(12).toString("hex");
+  const filename = `${id}.${ext}`;
 
   const buf = Buffer.from(await file.arrayBuffer());
-  const blob = new Blob([buf], { type: file.type });
+  const contentB64 = buf.toString("base64");
 
-  const uploadForm = new FormData();
-  uploadForm.append("file", blob);
-  uploadForm.append("api_key", apiKey);
-  uploadForm.append("timestamp", String(timestamp));
-  uploadForm.append("signature", signature);
-
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-    method: "POST",
-    body: uploadForm
-  });
+  const res = await fetch(
+    `https://api.github.com/repos/${OWNER}/${REPO}/contents/${filename}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "User-Agent": "payphone-upload",
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: `upload ${filename}`,
+        content: contentB64,
+        branch: BRANCH,
+      }),
+    }
+  );
 
   if (!res.ok) {
     const err = await res.text();
@@ -40,5 +48,7 @@ export async function POST(req: NextRequest) {
   }
 
   const data = await res.json();
-  return NextResponse.json({ id: data.public_id, url: data.secure_url });
+  const sha = data.commit?.sha || BRANCH;
+  const url = `https://cdn.jsdelivr.net/gh/${OWNER}/${REPO}@${sha}/${filename}`;
+  return NextResponse.json({ id, url });
 }
