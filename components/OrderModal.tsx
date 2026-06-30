@@ -21,6 +21,11 @@ function detectBundle(product: Product): { is1plus1: boolean; label: string } {
   return { is1plus1: false, label: "" };
 }
 
+// ค่าจัดส่ง: ต่ำกว่า 200 บาท คิด 15 บาท / 200 ขึ้นไป ส่งฟรี
+function shippingFee(price: number): number {
+  return price >= 200 ? 0 : 15;
+}
+
 export default function OrderModal({
   product, onClose
 }: { product: Product | null; onClose: () => void }) {
@@ -66,6 +71,8 @@ export default function OrderModal({
   const images = [product.image_url, product.image_url2, product.image_url3].filter(Boolean) as string[];
   const badge = product.badge_text && product.badge_text !== "null" ? product.badge_text : null;
   const currentImg = images[imgIdx];
+  const ship = shippingFee(product.price);
+  const totalPay = product.price + ship;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -240,7 +247,7 @@ export default function OrderModal({
               <label className="text-sm text-gray-700">{t("branch")} <span className="text-red-500">*</span></label>
               <input type="text" value={branchSearch}
                 onChange={e => { setBranchSearch(e.target.value); setBranch(""); setBranchOpen(true); }}
-                onFocus={() => setBranchOpen(true)}
+                onFocus={e => { setBranchOpen(true); e.currentTarget.select(); }}
                 onBlur={() => setTimeout(() => setBranchOpen(false), 200)}
                 className="w-full border rounded-lg p-2 mt-1"
                 placeholder={t("searchBranch")}/>
@@ -312,13 +319,13 @@ export default function OrderModal({
               </div>
               <div className="flex justify-between text-sm text-gray-700">
                 <span>ค่าจัดส่ง</span>
-                <span>{product.price >= 200 ? "ส่งฟรี 🎉" : "฿15"}</span>
+                <span>{ship === 0 ? "ส่งฟรี 🎉" : `฿${ship}`}</span>
               </div>
               <div className="flex justify-between items-center border-t border-emerald-200 pt-2 mt-1">
                 <span className="text-sm font-semibold">ยอดที่ต้องโอน</span>
-                <span className="text-2xl font-bold text-emerald-600">฿{(product.price + (product.price >= 200 ? 0 : 15)).toLocaleString()}</span>
+                <span className="text-2xl font-bold text-emerald-600">฿{totalPay.toLocaleString()}</span>
               </div>
-              {product.price < 200 && (
+              {ship > 0 && (
                 <div className="text-xs text-orange-500 text-center pt-1">💡 ซื้อครบ ฿200 ส่งฟรี!</div>
               )}
             </div>
