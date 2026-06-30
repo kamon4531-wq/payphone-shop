@@ -239,8 +239,9 @@ function OrdersTab() {
 
   function playBeep() {
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      audioCtxRef.current = ctx;
+      let ctx = audioCtxRef.current;
+      if (!ctx) { ctx = new (window.AudioContext || (window as any).webkitAudioContext)(); audioCtxRef.current = ctx; }
+      if (ctx.state === "suspended") { try { ctx.resume(); } catch {} }
       const master = ctx.createGain();
       master.gain.value = 1.0;
       master.connect(ctx.destination);
@@ -262,7 +263,7 @@ function OrdersTab() {
       setTimeout(() => { oscs.forEach((o, i) => { o.frequency.value = [880, 1760, 880][i]; }); }, 300);
       setTimeout(() => { oscs.forEach((o, i) => { o.frequency.value = [1760, 1320, 1320][i]; }); }, 450);
       setTimeout(() => { oscs.forEach((o, i) => { o.frequency.value = [880, 1320, 1760][i]; }); }, 600);
-      setTimeout(() => { oscs.forEach(o => o.stop()); ctx.close(); }, 900);
+      setTimeout(() => { oscs.forEach(o => { try { o.stop(); } catch {} }); }, 900);
       // Vibration (Android)
       if ("vibrate" in navigator) {
         try { navigator.vibrate([300, 100, 300, 100, 300]); } catch {}
@@ -287,10 +288,23 @@ function OrdersTab() {
     }
     setRinging(false);
     setPendingOrderName("");
-    try { audioCtxRef.current?.close(); } catch {}
+    /* keep audio ready for next ring */
   }
 
   useEffect(() => () => stopRinging(), []);
+
+  // ปลดล็อกเสียงอัตโนมัติเมื่อคลิกหน้าเว็บครั้งแรก (login/คลิกใดๆ)
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        if (!audioCtxRef.current) audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume();
+      } catch {}
+      window.removeEventListener("pointerdown", unlock);
+    };
+    window.addEventListener("pointerdown", unlock);
+    return () => window.removeEventListener("pointerdown", unlock);
+  }, []);
 
   async function load(notify = true) {
     const r = await fetch("/api/orders/list"); const d = await r.json();
