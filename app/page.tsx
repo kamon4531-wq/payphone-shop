@@ -41,8 +41,7 @@ export default function Home() {
     setIsIOS(/iPhone|iPad|iPod/.test(window.navigator.userAgent));
     const handler = (e: any) => { e.preventDefault(); setDeferredPrompt(e); };
     window.addEventListener("beforeinstallprompt", handler);
-    const t = setTimeout(() => setShowInstall(true), 800);
-    return () => { window.removeEventListener("beforeinstallprompt", handler); clearTimeout(t); };
+    return () => { window.removeEventListener("beforeinstallprompt", handler); };
   }, []);
 
   async function installApp() {
