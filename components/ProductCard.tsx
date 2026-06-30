@@ -5,11 +5,12 @@ import { Product } from "@/lib/types";
 function optImg(url: string, w: number) {
   if (!url) return "";
   if (url.includes("cloudinary.com") && url.includes("/upload/")) {
-return url.replace("/upload/", `/upload/f_auto,q_auto,w_${w}/`).replace(/\.(png|jpe?g|webp|jxl|gif|avif)$/i, "");  }
+    return url.replace("/upload/", `/upload/f_auto,q_auto,w_${w}/`).replace(/\.(png|jpe?g|webp|jxl|gif|avif)$/i, "");
+  }
   return url;
 }
 
-export default function ProductCard({ p, onBuy }: { p: Product; onBuy: (p: Product) => void }) {
+export default function ProductCard({ p, onBuy, onAdd }: { p: Product; onBuy: (p: Product) => void; onAdd?: (p: Product) => void }) {
   const discount = p.old_price && p.old_price > p.price
     ? Math.round(((p.old_price - p.price) / p.old_price) * 100)
     : 0;
@@ -57,12 +58,23 @@ export default function ProductCard({ p, onBuy }: { p: Product; onBuy: (p: Produ
             <span className="text-xs text-gray-400 line-through">฿{p.old_price.toLocaleString()}</span>
           )}
         </div>
-        <button
-          onClick={() => onBuy(p)}
-          className="mt-3 bg-black hover:bg-gray-800 text-white text-sm rounded-lg py-2 font-medium"
-        >
-          ดูรายละเอียด / สั่งซื้อ
-        </button>
+        <div className="mt-3 flex gap-2">
+          <button
+            onClick={() => onBuy(p)}
+            className="flex-1 bg-black hover:bg-gray-800 text-white text-sm rounded-lg py-2 font-medium"
+          >
+            รายละเอียด
+          </button>
+          {onAdd && (
+            <button
+              onClick={() => onAdd(p)}
+              title="ใส่ตะกร้า"
+              className="bg-emerald-500 hover:bg-emerald-600 text-white text-base rounded-lg px-3 font-medium"
+            >
+              🛒
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
