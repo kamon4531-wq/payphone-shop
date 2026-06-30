@@ -7,6 +7,9 @@ function optImg(url: string, w: number) {
   if (url.includes("cloudinary.com") && url.includes("/upload/")) {
     return url.replace("/upload/", `/upload/f_auto,q_auto,w_${w}/`).replace(/\.(png|jpe?g|webp|jxl|gif|avif)$/i, "");
   }
+  if (/^https?:\/\//.test(url)) {
+    return `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${w}&output=webp&q=82`;
+  }
   return url;
 }
 
@@ -23,8 +26,9 @@ export default function ProductCard({ p, onBuy, onAdd }: { p: Product; onBuy: (p
     <div className="bg-white rounded-2xl shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
       <div className="relative bg-gray-100 aspect-square">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={optImg(mainImg, 400)} alt={p.name}
+        <img src={optImg(mainImg, 600)} data-fallback={mainImg} alt={p.name}
           loading="lazy"
+          onError={(e)=>{const t=e.currentTarget; if(t.dataset.fallback && t.src!==t.dataset.fallback){t.src=t.dataset.fallback;}}}
           className="w-full h-full object-contain p-4" />
         {badge && (
           <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md">
@@ -42,9 +46,10 @@ export default function ProductCard({ p, onBuy, onAdd }: { p: Product; onBuy: (p
         <div className="flex gap-1 px-3 pt-2 justify-center">
           {images.map((img, idx) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={idx} src={optImg(img, 80)} alt={`${idx+1}`}
+            <img key={idx} src={optImg(img, 160)} data-fallback={img} alt={`${idx+1}`}
               loading="lazy"
               onClick={() => setMainImg(img)}
+              onError={(e)=>{const t=e.currentTarget; if(t.dataset.fallback && t.src!==t.dataset.fallback){t.src=t.dataset.fallback;}}}
               className={`w-10 h-10 object-contain border-2 rounded cursor-pointer bg-gray-50 ${mainImg===img?"border-emerald-500":"border-gray-200"}`}/>
           ))}
         </div>
