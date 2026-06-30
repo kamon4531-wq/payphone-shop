@@ -88,8 +88,10 @@ export default function Shop() {
       {cartOpen && <CartModal items={cart} onClose={()=>setCartOpen(false)} setQty={setQty} removeItem={removeItem} clearCart={clearCart} />}
 
       <button onClick={()=>setCartOpen(true)}
-        className="fixed bottom-5 right-5 z-40 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full w-16 h-16 shadow-lg flex items-center justify-center text-2xl">
-        🛒
+        className="fixed bottom-5 right-5 z-40 bg-white hover:bg-gray-50 rounded-full w-16 h-16 shadow-lg border border-gray-200 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="#f97316" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17M17 13v0M9 19a1 1 0 11-2 0 1 1 0 012 0zm8 0a1 1 0 11-2 0 1 1 0 012 0z" />
+        </svg>
         {cartCount > 0 && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">{cartCount}</span>
         )}
