@@ -8,6 +8,10 @@ function getThaiNow(): Date {
   return new Date(Date.now() + 7 * 3600 * 1000);
 }
 
+function getCurrentThaiYear(): number {
+  return getThaiNow().getUTCFullYear();
+}
+
 function getCurrentThaiMonth(): string {
   const t = getThaiNow();
   const y = t.getUTCFullYear();
@@ -15,45 +19,63 @@ function getCurrentThaiMonth(): string {
   return `${y}-${m}`;
 }
 
-function getMonthOptions(count: number): string[] {
-  const t = getThaiNow();
-  const y = t.getUTCFullYear();
-  const m = t.getUTCMonth();
+// Return all 12 months of the given year in order Jan..Dec
+function getYearMonthOptions(year: number): string[] {
   const list: string[] = [];
-  for (let i = 0; i < count; i++) {
-    const d = new Date(Date.UTC(y, m - i, 1));
-    const yy = d.getUTCFullYear();
-    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-    list.push(`${yy}-${mm}`);
+  for (let i = 1; i <= 12; i++) {
+    list.push(`${year}-${String(i).padStart(2, "0")}`);
   }
   return list;
 }
 
 function formatMonthLabel(ym: string): string {
-  if (ym === "all") return "ทั้งหมด";
   const parts = ym.split("-");
   if (parts.length !== 2) return ym;
-  const y = parseInt(parts[0]);
   const m = parseInt(parts[1]);
-  return `${THAI_MONTHS[m - 1]} ${y + 543}`;
+  return THAI_MONTHS[m - 1] || ym;
+}
+
+// Selection value:
+//   "all-<year>" → whole year (Jan-Dec)
+//   "<year>-<mm>" → single month
+type Selection = { kind: "year"; year: number } | { kind: "month"; ym: string };
+
+function parseSelection(v: string): Selection {
+  if (v.startsWith("all-")) {
+    return { kind: "year", year: parseInt(v.slice(4)) };
+  }
+  return { kind: "month", ym: v };
+}
+
+function buildQuery(sel: Selection): string {
+  if (sel.kind === "year") return `year=${sel.year}`;
+  return `month=${encodeURIComponent(sel.ym)}`;
 }
 
 export default function RegistrationsPage() {
   const [data, setData] = useState<any[]>([]);
-  const [month, setMonth] = useState<string>(getCurrentThaiMonth());
+  const currentYear = useMemo(() => getCurrentThaiYear(), []);
+  const [year, setYear] = useState<number>(currentYear);
+  const [selected, setSelected] = useState<string>(getCurrentThaiMonth());
   const [region, setRegion] = useState("all");
   const [loading, setLoading] = useState(true);
   const [hideZero, setHideZero] = useState(false);
 
-  const monthOptions = useMemo(() => getMonthOptions(12), []);
+  const yearOptions = useMemo(() => {
+    // Show current year and previous 2 years
+    return [currentYear, currentYear - 1, currentYear - 2];
+  }, [currentYear]);
+
+  const monthOptions = useMemo(() => getYearMonthOptions(year), [year]);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/registrations/summary?month=${encodeURIComponent(month)}`)
+    const sel = parseSelection(selected);
+    fetch(`/api/registrations/summary?${buildQuery(sel)}`)
       .then(r => r.json())
       .then(d => { setData(Array.isArray(d) ? d : []); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [month]);
+  }, [selected]);
 
   const dataMap: Record<string, any> = {};
   data.forEach(r => { dataMap[r.branch_code] = r; });
@@ -79,6 +101,22 @@ export default function RegistrationsPage() {
   const totalLine = filtered.reduce((s, r) => s + r.line, 0);
   const totalAll = totalReg + totalLine;
 
+  const sel = parseSelection(selected);
+  const currentLabel = sel.kind === "year"
+    ? `ทั้งหมด (ม.ค. - ธ.ค. ${sel.year + 543})`
+    : `${formatMonthLabel(sel.ym)} ${parseInt(sel.ym.split("-")[0]) + 543}`;
+
+  function selectYear(y: number) {
+    setYear(y);
+    // Keep same month if year changes but selection was month
+    if (sel.kind === "month") {
+      const mm = sel.ym.split("-")[1];
+      setSelected(`${y}-${mm}`);
+    } else {
+      setSelected(`all-${y}`);
+    }
+  }
+
   return (
     <main className="max-w-4xl mx-auto p-4">
       <header className="flex items-center justify-between mb-4">
@@ -87,17 +125,30 @@ export default function RegistrationsPage() {
       </header>
 
       <div className="mb-3">
+        <div className="text-xs font-semibold text-gray-600 mb-1">เลือกปี</div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {yearOptions.map(y => (
+            <button key={y} onClick={() => selectYear(y)}
+              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold border ${
+                year === y ? "bg-indigo-600 text-white border-indigo-600" : "bg-white"
+              }`}
+            >{y + 543}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-3">
         <div className="text-xs font-semibold text-gray-600 mb-1">เลือกเดือน</div>
         <div className="flex gap-2 overflow-x-auto pb-1">
-          <button onClick={() => setMonth("all")}
+          <button onClick={() => setSelected(`all-${year}`)}
             className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold border ${
-              month === "all" ? "bg-purple-600 text-white border-purple-600" : "bg-white"
+              selected === `all-${year}` ? "bg-purple-600 text-white border-purple-600" : "bg-white"
             }`}
           >ทั้งหมด</button>
           {monthOptions.map(ym => (
-            <button key={ym} onClick={() => setMonth(ym)}
+            <button key={ym} onClick={() => setSelected(ym)}
               className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold border ${
-                month === ym ? "bg-emerald-500 text-white border-emerald-500" : "bg-white"
+                selected === ym ? "bg-emerald-500 text-white border-emerald-500" : "bg-white"
               }`}
             >{formatMonthLabel(ym)}</button>
           ))}
@@ -120,7 +171,7 @@ export default function RegistrationsPage() {
       </label>
 
       <div className="text-xs text-gray-500 mb-2">
-        กำลังดู: <span className="font-semibold text-gray-800">{formatMonthLabel(month)}</span>
+        กำลังดู: <span className="font-semibold text-gray-800">{currentLabel}</span>
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-4">
@@ -172,9 +223,9 @@ export default function RegistrationsPage() {
         </div>
       )}
 
-      <a href={`/api/registrations/export?month=${encodeURIComponent(month)}`}
+      <a href={`/api/registrations/export?${buildQuery(sel)}`}
         className="block mt-4 bg-blue-500 hover:bg-blue-600 text-white text-center py-3 rounded-lg font-semibold">
-        📥 Export CSV ({formatMonthLabel(month)})
+        📥 Export CSV ({currentLabel})
       </a>
     </main>
   );
