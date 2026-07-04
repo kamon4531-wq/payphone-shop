@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isAdmin } from "@/lib/auth";
 
-// Thai timezone (UTC+7) month range helper
+// Thai timezone (UTC+7) helpers
 function monthRange(monthStr: string): { since?: string; until?: string } {
   if (!monthStr || monthStr === "all") return {};
   const m = /^(\d{4})-(\d{2})$/.exec(monthStr);
@@ -14,10 +14,19 @@ function monthRange(monthStr: string): { since?: string; until?: string } {
   return { since, until };
 }
 
+function yearRange(yearStr: string): { since?: string; until?: string } {
+  const y = parseInt(yearStr);
+  if (!y || isNaN(y)) return {};
+  const since = new Date(Date.UTC(y, 0, 1, -7, 0, 0)).toISOString();
+  const until = new Date(Date.UTC(y + 1, 0, 1, -7, 0, 0)).toISOString();
+  return { since, until };
+}
+
 export async function GET(req: NextRequest) {
   if (!isAdmin(req)) return NextResponse.json({ error: "no" }, { status: 401 });
 
   const monthParam = req.nextUrl.searchParams.get("month");
+  const yearParam = req.nextUrl.searchParams.get("year");
   const days = parseInt(req.nextUrl.searchParams.get("days") || "30");
 
   let since: string | undefined;
@@ -29,6 +38,11 @@ export async function GET(req: NextRequest) {
     since = range.since;
     until = range.until;
     filenameSuffix = monthParam === "all" ? "all" : monthParam;
+  } else if (yearParam) {
+    const range = yearRange(yearParam);
+    since = range.since;
+    until = range.until;
+    filenameSuffix = `year-${yearParam}`;
   } else {
     since = new Date(Date.now() - days * 86400000).toISOString();
     filenameSuffix = `${days}days`;
