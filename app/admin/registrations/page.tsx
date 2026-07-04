@@ -19,7 +19,6 @@ function getCurrentThaiMonth(): string {
   return `${y}-${m}`;
 }
 
-// Return all 12 months of the given year in order Jan..Dec
 function getYearMonthOptions(year: number): string[] {
   const list: string[] = [];
   for (let i = 1; i <= 12; i++) {
@@ -35,15 +34,10 @@ function formatMonthLabel(ym: string): string {
   return THAI_MONTHS[m - 1] || ym;
 }
 
-// Selection value:
-//   "all-<year>" → whole year (Jan-Dec)
-//   "<year>-<mm>" → single month
 type Selection = { kind: "year"; year: number } | { kind: "month"; ym: string };
 
 function parseSelection(v: string): Selection {
-  if (v.startsWith("all-")) {
-    return { kind: "year", year: parseInt(v.slice(4)) };
-  }
+  if (v.startsWith("all-")) return { kind: "year", year: parseInt(v.slice(4)) };
   return { kind: "month", ym: v };
 }
 
@@ -54,17 +48,11 @@ function buildQuery(sel: Selection): string {
 
 export default function RegistrationsPage() {
   const [data, setData] = useState<any[]>([]);
-  const currentYear = useMemo(() => getCurrentThaiYear(), []);
-  const [year, setYear] = useState<number>(currentYear);
+  const year = useMemo(() => getCurrentThaiYear(), []);
   const [selected, setSelected] = useState<string>(getCurrentThaiMonth());
   const [region, setRegion] = useState("all");
   const [loading, setLoading] = useState(true);
   const [hideZero, setHideZero] = useState(false);
-
-  const yearOptions = useMemo(() => {
-    // Show current year and previous 2 years
-    return [currentYear, currentYear - 1, currentYear - 2];
-  }, [currentYear]);
 
   const monthOptions = useMemo(() => getYearMonthOptions(year), [year]);
 
@@ -104,18 +92,7 @@ export default function RegistrationsPage() {
   const sel = parseSelection(selected);
   const currentLabel = sel.kind === "year"
     ? `ทั้งหมด (ม.ค. - ธ.ค. ${sel.year + 543})`
-    : `${formatMonthLabel(sel.ym)} ${parseInt(sel.ym.split("-")[0]) + 543}`;
-
-  function selectYear(y: number) {
-    setYear(y);
-    // Keep same month if year changes but selection was month
-    if (sel.kind === "month") {
-      const mm = sel.ym.split("-")[1];
-      setSelected(`${y}-${mm}`);
-    } else {
-      setSelected(`all-${y}`);
-    }
-  }
+    : `${formatMonthLabel(sel.ym)} ${year + 543}`;
 
   return (
     <main className="max-w-4xl mx-auto p-4">
@@ -125,20 +102,7 @@ export default function RegistrationsPage() {
       </header>
 
       <div className="mb-3">
-        <div className="text-xs font-semibold text-gray-600 mb-1">เลือกปี</div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {yearOptions.map(y => (
-            <button key={y} onClick={() => selectYear(y)}
-              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold border ${
-                year === y ? "bg-indigo-600 text-white border-indigo-600" : "bg-white"
-              }`}
-            >{y + 543}</button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mb-3">
-        <div className="text-xs font-semibold text-gray-600 mb-1">เลือกเดือน</div>
+        <div className="text-xs font-semibold text-gray-600 mb-1">เลือกเดือน (ปี {year + 543})</div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           <button onClick={() => setSelected(`all-${year}`)}
             className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold border ${
