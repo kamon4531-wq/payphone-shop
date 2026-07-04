@@ -2,17 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isAdmin } from "@/lib/auth";
 
-// Thai timezone (UTC+7) helpers
+// Thai timezone (UTC+7) range helpers
 function monthRange(monthStr: string): { since?: string; until?: string } {
   if (!monthStr || monthStr === "all") return {};
   const m = /^(\d{4})-(\d{2})$/.exec(monthStr);
   if (!m) return {};
   const y = parseInt(m[1]);
   const mo = parseInt(m[2]);
-  // Start of month in Thai time (UTC+7) → UTC = Thai - 7h
-  // So 1st of month 00:00 Thai = previous day 17:00 UTC
   const since = new Date(Date.UTC(y, mo - 1, 1, -7, 0, 0)).toISOString();
   const until = new Date(Date.UTC(y, mo, 1, -7, 0, 0)).toISOString();
+  return { since, until };
+}
+
+function yearRange(yearStr: string): { since?: string; until?: string } {
+  const y = parseInt(yearStr);
+  if (!y || isNaN(y)) return {};
+  const since = new Date(Date.UTC(y, 0, 1, -7, 0, 0)).toISOString();
+  const until = new Date(Date.UTC(y + 1, 0, 1, -7, 0, 0)).toISOString();
   return { since, until };
 }
 
@@ -20,6 +26,7 @@ export async function GET(req: NextRequest) {
   if (!isAdmin(req)) return NextResponse.json({ error: "no" }, { status: 401 });
 
   const monthParam = req.nextUrl.searchParams.get("month");
+  const yearParam = req.nextUrl.searchParams.get("year");
   const days = parseInt(req.nextUrl.searchParams.get("days") || "30");
 
   let since: string | undefined;
@@ -27,6 +34,10 @@ export async function GET(req: NextRequest) {
 
   if (monthParam) {
     const range = monthRange(monthParam);
+    since = range.since;
+    until = range.until;
+  } else if (yearParam) {
+    const range = yearRange(yearParam);
     since = range.since;
     until = range.until;
   } else {
