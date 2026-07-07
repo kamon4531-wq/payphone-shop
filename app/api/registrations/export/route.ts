@@ -1,76 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isAdmin } from "@/lib/auth";
-
-// Thai timezone (UTC+7) helpers
-function monthRange(monthStr: string): { since?: string; until?: string } {
-  if (!monthStr || monthStr === "all") return {};
-  const m = /^(\d{4})-(\d{2})$/.exec(monthStr);
-  if (!m) return {};
-  const y = parseInt(m[1]);
-  const mo = parseInt(m[2]);
-  const since = new Date(Date.UTC(y, mo - 1, 1, -7, 0, 0)).toISOString();
-  const until = new Date(Date.UTC(y, mo, 1, -7, 0, 0)).toISOString();
-  return { since, until };
-}
-
-function yearRange(yearStr: string): { since?: string; until?: string } {
-  const y = parseInt(yearStr);
-  if (!y || isNaN(y)) return {};
-  const since = new Date(Date.UTC(y, 0, 1, -7, 0, 0)).toISOString();
-  const until = new Date(Date.UTC(y + 1, 0, 1, -7, 0, 0)).toISOString();
-  return { since, until };
-}
+import { BRANCHES } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   if (!isAdmin(req)) return NextResponse.json({ error: "no" }, { status: 401 });
 
-  const monthParam = req.nextUrl.searchParams.get("month");
-  const yearParam = req.nextUrl.searchParams.get("year");
-  const days = parseInt(req.nextUrl.searchParams.get("days") || "30");
+  const month = req.nextUrl.searchParams.get("month");
+  let since: string, until: string, tag: string;
 
-  let since: string | undefined;
-  let until: string | undefined;
-  let filenameSuffix: string;
-
-  if (monthParam) {
-    const range = monthRange(monthParam);
-    since = range.since;
-    until = range.until;
-    filenameSuffix = monthParam === "all" ? "all" : monthParam;
-  } else if (yearParam) {
-    const range = yearRange(yearParam);
-    since = range.since;
-    until = range.until;
-    filenameSuffix = `year-${yearParam}`;
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    const [y, m] = month.split("-").map(Number);
+    since = new Date(Date.UTC(y, m - 1, 1, -7)).toISOString();
+    until = new Date(Date.UTC(y, m, 1, -7)).toISOString();
+    tag = month;
   } else {
+    const days = parseInt(req.nextUrl.searchParams.get("days") || "30");
     since = new Date(Date.now() - days * 86400000).toISOString();
-    filenameSuffix = `${days}days`;
+    until = new Date(Date.now() + 86400000).toISOString();
+    tag = `${days}days`;
   }
 
-  let q: any = supabaseAdmin()
-    .from("register_clicks")
-    .select("*")
-    .order("clicked_at", { ascending: false });
-  if (since) q = q.gte("clicked_at", since);
-  if (until) q = q.lt("clicked_at", until);
+  const [regRes, lineRes] = await Promise.all([
+    supabaseAdmin().from("register_clicks").select("branch_code").gte("clicked_at", since).lt("clicked_at", until),
+    supabaseAdmin().from("line_follows").select("branch_code").eq("event_type", "follow").gte("created_at", since).lt("created_at", until)
+  ]);
 
-  const { data } = await q;
+  const counts: Record<string, { register: number; line: number }> = {};
+  regRes.data?.forEach((r: any) => {
+    if (!counts[r.branch_code]) counts[r.branch_code] = { register: 0, line: 0 };
+    counts[r.branch_code].register += 1;
+  });
+  lineRes.data?.forEach((r: any) => {
+    if (!counts[r.branch_code]) counts[r.branch_code] = { register: 0, line: 0 };
+    counts[r.branch_code].line += 1;
+  });
 
-  const header = "วันที่,เวลา,รหัสสาขา,IP\n";
-  const rows = (data || []).map((r: any) => {
-    const d = new Date(r.clicked_at);
-    const date = d.toLocaleDateString("th-TH");
-    const time = d.toLocaleTimeString("th-TH");
-    return `${date},${time},${r.branch_code},${r.ip || ""}`;
-  }).join("\n");
+  const rows = BRANCHES.map(b => {
+    const code = b.name.split(":")[0];
+    const name = (b.name.split(":")[1] || b.name).replace(/[,\n]/g, " ");
+    const c = counts[code] || { register: 0, line: 0 };
+    return { code, name, region: b.region, register: c.register, line: c.line, total: c.register + c.line };
+  }).sort((a, b) => b.total - a.total);
 
-  const csv = "\ufeff" + header + rows;
+  const header = "รหัสสาขา,ชื่อสาขา,ภาค,คลิกสมัคร,เพื่อนLineจริง,รวม\n";
+  const body = rows.map(r => `${r.code},${r.name},${r.region},${r.register},${r.line},${r.total}`).join("\n");
+  const csv = "\ufeff" + header + body;
 
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="registrations-${filenameSuffix}.csv"`
+      "Content-Disposition": `attachment; filename="registrations-${tag}.csv"`
     }
   });
 }
