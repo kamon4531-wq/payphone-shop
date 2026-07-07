@@ -7,6 +7,17 @@ export async function POST(req: NextRequest, { params }: { params: { branch: str
   const events = body.events || [];
 
   const admin = supabaseAdmin();
+
+  // === บันทึกการแอด/เลิกแอดเพื่อน OA จริง (นับเฉพาะที่เกิดจริง ไม่ใช่คลิก) ===
+  for (const ev of events) {
+    const uid = ev.source?.userId;
+    if (ev.type === "follow" && uid) {
+      await admin.from("line_follows").insert({ branch_code: branch, line_user_id: uid, event_type: "follow" }).then(() => {}, () => {});
+    } else if (ev.type === "unfollow" && uid) {
+      await admin.from("line_follows").insert({ branch_code: branch, line_user_id: uid, event_type: "unfollow" }).then(() => {}, () => {});
+    }
+  }
+
   const { data: settings } = await admin
     .from("branch_line_settings")
     .select("channel_access_token, branch_code")
