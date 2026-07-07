@@ -245,7 +245,6 @@ function OrdersTab() {
       const master = ctx.createGain();
       master.gain.value = 1.0;
       master.connect(ctx.destination);
-      // Siren: 3 oscillators (square wave = louder/harsher) at different freqs
       const freqs = [880, 1320, 1760];
       const oscs: OscillatorNode[] = [];
       for (const f of freqs) {
@@ -258,13 +257,11 @@ function OrdersTab() {
         o.start();
         oscs.push(o);
       }
-      // Siren sweep
       setTimeout(() => { oscs.forEach((o, i) => { o.frequency.value = [1320, 880, 1320][i]; }); }, 150);
       setTimeout(() => { oscs.forEach((o, i) => { o.frequency.value = [880, 1760, 880][i]; }); }, 300);
       setTimeout(() => { oscs.forEach((o, i) => { o.frequency.value = [1760, 1320, 1320][i]; }); }, 450);
       setTimeout(() => { oscs.forEach((o, i) => { o.frequency.value = [880, 1320, 1760][i]; }); }, 600);
       setTimeout(() => { oscs.forEach(o => { try { o.stop(); } catch {} }); }, 900);
-      // Vibration (Android)
       if ("vibrate" in navigator) {
         try { navigator.vibrate([300, 100, 300, 100, 300]); } catch {}
       }
@@ -288,12 +285,10 @@ function OrdersTab() {
     }
     setRinging(false);
     setPendingOrderName("");
-    /* keep audio ready for next ring */
   }
 
   useEffect(() => () => stopRinging(), []);
 
-  // ปลดล็อกเสียงอัตโนมัติเมื่อคลิกหน้าเว็บครั้งแรก (login/คลิกใดๆ)
   useEffect(() => {
     const unlock = () => {
       try {
@@ -316,7 +311,18 @@ function OrdersTab() {
     }
     lastCountRef.current = newOrders.length;
   }
-  useEffect(() => { load(false); const i = setInterval(() => load(true), 15000); return () => clearInterval(i); /* eslint-disable-line */ }, []);
+  // เช็คออเดอร์เฉพาะตอนเปิดดูจริง (จอเปิด+แท็บนี้) ทุก 60 วิ — พักจอ/สลับแท็บ = หยุดยิง (Push รับช่วงแทน)
+  useEffect(() => {
+    load(false);
+    let i: any = null;
+    const start = () => { if (!i) i = setInterval(() => load(true), 60000); };
+    const stop = () => { if (i) { clearInterval(i); i = null; } };
+    const onVis = () => { if (document.hidden) { stop(); } else { load(true); start(); } };
+    if (typeof document !== "undefined" && !document.hidden) start();
+    document.addEventListener("visibilitychange", onVis);
+    return () => { stop(); document.removeEventListener("visibilitychange", onVis); };
+    /* eslint-disable-line */
+  }, []);
 
   function copyAddr(t: string) { navigator.clipboard.writeText(t); alert("คัดลอกแล้ว"); }
   async function delSlip(id: string) { if (!confirm("ลบสลิป?")) return; const r = await fetch(`/api/orders?id=${id}&action=clear-slip`, { method: "DELETE" }); if (r.ok) load(false); else alert("ลบไม่สำเร็จ"); }
