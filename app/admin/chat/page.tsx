@@ -42,15 +42,25 @@ export default function AdminChatPage() {
 
   useEffect(() => {
     loadConversations();
-    const interval = setInterval(loadConversations, 10000);
-    return () => clearInterval(interval);
+    let i: any = null;
+    const start = () => { if (!i) i = setInterval(loadConversations, 30000); };
+    const stop = () => { if (i) { clearInterval(i); i = null; } };
+    const onVis = () => { if (document.hidden) stop(); else { loadConversations(); start(); } };
+    if (typeof document !== "undefined" && !document.hidden) start();
+    document.addEventListener("visibilitychange", onVis);
+    return () => { stop(); document.removeEventListener("visibilitychange", onVis); };
   }, []);
 
   useEffect(() => {
     loadMessages();
     if (!selected) return;
-    const interval = setInterval(loadMessages, 5000);
-    return () => clearInterval(interval);
+    let i: any = null;
+    const start = () => { if (!i) i = setInterval(loadMessages, 15000); };
+    const stop = () => { if (i) { clearInterval(i); i = null; } };
+    const onVis = () => { if (document.hidden) stop(); else { loadMessages(); start(); } };
+    if (typeof document !== "undefined" && !document.hidden) start();
+    document.addEventListener("visibilitychange", onVis);
+    return () => { stop(); document.removeEventListener("visibilitychange", onVis); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
 
