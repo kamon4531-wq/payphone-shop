@@ -2,57 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isAdmin } from "@/lib/auth";
 
-// Thai timezone (UTC+7) range helpers
-function monthRange(monthStr: string): { since?: string; until?: string } {
-  if (!monthStr || monthStr === "all") return {};
-  const m = /^(\d{4})-(\d{2})$/.exec(monthStr);
-  if (!m) return {};
-  const y = parseInt(m[1]);
-  const mo = parseInt(m[2]);
-  const since = new Date(Date.UTC(y, mo - 1, 1, -7, 0, 0)).toISOString();
-  const until = new Date(Date.UTC(y, mo, 1, -7, 0, 0)).toISOString();
-  return { since, until };
-}
-
-function yearRange(yearStr: string): { since?: string; until?: string } {
-  const y = parseInt(yearStr);
-  if (!y || isNaN(y)) return {};
-  const since = new Date(Date.UTC(y, 0, 1, -7, 0, 0)).toISOString();
-  const until = new Date(Date.UTC(y + 1, 0, 1, -7, 0, 0)).toISOString();
-  return { since, until };
-}
-
 export async function GET(req: NextRequest) {
   if (!isAdmin(req)) return NextResponse.json({ error: "no" }, { status: 401 });
 
-  const monthParam = req.nextUrl.searchParams.get("month");
-  const yearParam = req.nextUrl.searchParams.get("year");
-  const days = parseInt(req.nextUrl.searchParams.get("days") || "30");
+  const month = req.nextUrl.searchParams.get("month"); // รูปแบบ "YYYY-MM"
+  let since: string, until: string;
 
-  let since: string | undefined;
-  let until: string | undefined;
-
-  if (monthParam) {
-    const range = monthRange(monthParam);
-    since = range.since;
-    until = range.until;
-  } else if (yearParam) {
-    const range = yearRange(yearParam);
-    since = range.since;
-    until = range.until;
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    const [y, m] = month.split("-").map(Number);
+    // ขอบเขตเดือนตามเวลาไทย (UTC+7): เที่ยงคืนไทย = 17:00 UTC ของวันก่อนหน้า
+    since = new Date(Date.UTC(y, m - 1, 1, -7)).toISOString();
+    until = new Date(Date.UTC(y, m, 1, -7)).toISOString();
   } else {
+    const days = parseInt(req.nextUrl.searchParams.get("days") || "30");
     since = new Date(Date.now() - days * 86400000).toISOString();
+    until = new Date(Date.now() + 86400000).toISOString();
   }
 
-  const applyRange = (q: any) => {
-    if (since) q = q.gte("clicked_at", since);
-    if (until) q = q.lt("clicked_at", until);
-    return q;
-  };
-
   const [regRes, lineRes] = await Promise.all([
-    applyRange(supabaseAdmin().from("register_clicks").select("branch_code")),
-    applyRange(supabaseAdmin().from("line_clicks").select("branch_code"))
+    supabaseAdmin().from("register_clicks").select("branch_code").gte("clicked_at", since).lt("clicked_at", until),
+    supabaseAdmin().from("line_follows").select("branch_code").eq("event_type", "follow").gte("created_at", since).lt("created_at", until)
   ]);
 
   const counts: Record<string, { register: number; line: number }> = {};
