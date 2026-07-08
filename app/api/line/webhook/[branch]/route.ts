@@ -8,7 +8,6 @@ export async function POST(req: NextRequest, { params }: { params: { branch: str
 
   const admin = supabaseAdmin();
 
-  // === บันทึกการแอด/เลิกแอดเพื่อน OA จริง (นับเฉพาะที่เกิดจริง ไม่ใช่คลิก) ===
   for (const ev of events) {
     const uid = ev.source?.userId;
     if (ev.type === "follow" && uid) {
@@ -55,8 +54,6 @@ export async function POST(req: NextRequest, { params }: { params: { branch: str
         .single();
       const isMe = s?.recipient_id === userId;
       replyText = `สถานะ\nสาขา: ${branch}\nคุณรับแจ้งเตือน: ${isMe ? "✅ ใช่" : "❌ ไม่ใช่"}\nระบบเปิดใช้: ${s?.enabled ? "✅" : "❌"}\n\nพิมพ์ register เพื่อรับ\nพิมพ์ unregister เพื่อยกเลิก`;
-    } else {
-      replyText = `📦 ระบบแจ้งเตือนออเดอร์ PA.PHONE\nสาขา: ${branch}\n\nคำสั่ง:\n• register - รับแจ้งเตือนออเดอร์\n• unregister - ยกเลิก\n• status - เช็คสถานะ`;
     }
 
     if (replyToken && replyText) {
