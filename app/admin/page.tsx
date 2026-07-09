@@ -36,6 +36,24 @@ const ROLE_LABEL: Record<string, string> = { owner: "Owner", hq_admin: "HQ Admin
 function PushButton() {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        if (Notification.permission !== 'granted') return;
+        let reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+        const vk = "BLfx9RQtcW_Ef3yVfw8DRMdaBabB9JtExN7GSHZvAU0sMAzFwbKWlJm1V2lyAE1lz0TXLKSmyP-2hrmrYclzU44";
+        const u8 = (b: string) => { const pad = '='.repeat((4 - b.length % 4) % 4); const b64 = (b + pad).replace(/-/g, '+').replace(/_/g, '/'); const raw = atob(b64); const a = new Uint8Array(raw.length); for (let i = 0; i < raw.length; ++i) a[i] = raw.charCodeAt(i); return a; };
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: u8(vk) });
+        await fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
+        setStatus("🔔 พร้อมรับแจ้งเตือนอัตโนมัติ");
+      } catch {}
+    })();
+  }, []);
+
 
   async function enable() {
     setBusy(true);
