@@ -18,10 +18,11 @@ export type PushPayload = {
 
 export async function sendPushToBranch(branchCode: string, payload: PushPayload) {
   const admin = supabaseAdmin();
+  // ส่งให้ทั้งเครื่องของสาขานั้น และแอดมินกลาง (branch_code = null) เพื่อให้แอดมินกลางได้รับแจ้งเตือนทุกออเดอร์
   const { data: subs } = await admin
     .from("push_subscriptions")
     .select("*")
-    .eq("branch_code", branchCode);
+    .or(`branch_code.eq.${branchCode},branch_code.is.null`);
 
   if (!subs || subs.length === 0) return;
 
