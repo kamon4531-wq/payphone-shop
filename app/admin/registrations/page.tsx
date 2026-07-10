@@ -29,6 +29,14 @@ export default function RegistrationsPage() {
   const [hideZero, setHideZero] = useState(false);
   const [data, setData] = useState<any[]>([]);
   const [matrix, setMatrix] = useState<{ rows: any[]; months: string[] }>({ rows: [], months: [] });
+  const [me, setMe] = useState<any>(null);
+
+  // ดึงสิทธิ์ผู้ใช้ — ผจก.ภาค จะถูกล็อกให้เห็นเฉพาะเขตตัวเอง
+  useEffect(() => {
+    fetch("/api/admin/me").then(r => r.ok ? r.json() : null).then(d => setMe(d?.user || null)).catch(() => {});
+  }, []);
+  const lockedRegion = me?.role === "region_manager" ? (me.region_code || "all") : null;
+  const effRegion = lockedRegion || region;
 
   const isAll = month === "all";
 
@@ -49,8 +57,8 @@ export default function RegistrationsPage() {
 
   const branchInfo = BRANCHES.map(b => ({ code: b.name.split(":")[0], region: b.region }));
   const inRegion = (code: string) => {
-    if (region === "all") return true;
-    return branchInfo.find(b => b.code === code)?.region === region;
+    if (effRegion === "all") return true;
+    return branchInfo.find(b => b.code === code)?.region === effRegion;
   };
 
   // ---- โหมดเดือนเจาะจง ----
@@ -60,7 +68,7 @@ export default function RegistrationsPage() {
     const r = dataMap[b.code] || { register: 0, line: 0, count: 0 };
     return { branch_code: b.code, region: b.region, register: r.register || 0, line: r.line || 0, count: r.count || 0 };
   });
-  let filtered = region === "all" ? allRows : allRows.filter(r => r.region === region);
+  let filtered = effRegion === "all" ? allRows : allRows.filter(r => r.region === effRegion);
   if (hideZero) filtered = filtered.filter(r => r.count > 0);
   filtered.sort((a, b) => b.count - a.count);
   const totalReg = filtered.reduce((s, r) => s + r.register, 0);
@@ -90,6 +98,12 @@ export default function RegistrationsPage() {
         <a href="/admin" className="text-sm text-emerald-600 hover:underline">← Admin</a>
       </header>
 
+      {lockedRegion && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3 text-sm text-blue-800">
+          👤 คุณดูข้อมูลได้เฉพาะ <b>ภาค {lockedRegion}</b> ที่คุณดูแล
+        </div>
+      )}
+
       <div className="flex gap-2 mb-3 overflow-x-auto">
         {months.map(m => (
           <button key={m.value} onClick={() => setMonth(m.value)}
@@ -100,15 +114,17 @@ export default function RegistrationsPage() {
         ))}
       </div>
 
-      <div className="flex gap-2 mb-3 overflow-x-auto">
-        {["all", "R1", "R2", "R3", "R4"].map(r => (
-          <button key={r} onClick={() => setRegion(r)}
-            className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold ${
-              region === r ? "bg-blue-500 text-white" : "bg-white border"
-            }`}
-          >{r === "all" ? "ทั้งประเทศ" : `ภาค ${r}`}</button>
-        ))}
-      </div>
+      {!lockedRegion && (
+        <div className="flex gap-2 mb-3 overflow-x-auto">
+          {["all", "R1", "R2", "R3", "R4"].map(r => (
+            <button key={r} onClick={() => setRegion(r)}
+              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold ${
+                region === r ? "bg-blue-500 text-white" : "bg-white border"
+              }`}
+            >{r === "all" ? "ทั้งประเทศ" : `ภาค ${r}`}</button>
+          ))}
+        </div>
+      )}
 
       {isAll && (
         <div className="flex gap-2 mb-3">
