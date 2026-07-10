@@ -17,6 +17,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ months });
   }
 
+  // โหมดตาราง "ทั้งหมด": คืนข้อมูลรายสาขา-รายเดือนทั้งหมด ให้หน้าเว็บจัดเป็นคอลัมน์เดือนเอง
+  if (req.nextUrl.searchParams.get("matrix") === "1") {
+    const { data } = await admin.from("monthly_stats").select("branch_code, ym, members, line_friends");
+    const months = Array.from(new Set((data || []).map((r: any) => r.ym))).sort();
+    return NextResponse.json({ rows: data || [], months });
+  }
+
   const month = req.nextUrl.searchParams.get("month");
 
   const mk = (counts: Record<string, { register: number; line: number }>) =>
@@ -24,7 +31,7 @@ export async function GET(req: NextRequest) {
       .map(([branch_code, c]) => ({ branch_code, register: c.register, line: c.line, count: c.register + c.line }))
       .sort((a, b) => b.count - a.count);
 
-  // === โหมด "ทั้งหมด": รวมข้อมูลที่อัปโหลด (manual) ทุกเดือน ===
+  // === โหมด "ทั้งหมด" (สรุปรวม): รวมข้อมูลที่อัปโหลด (manual) ทุกเดือน ===
   if (month === "all" || !month) {
     const { data: ms } = await admin.from("monthly_stats").select("branch_code, members, line_friends");
     const counts: Record<string, { register: number; line: number }> = {};
