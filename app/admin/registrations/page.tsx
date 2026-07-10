@@ -60,7 +60,7 @@ export default function RegistrationsPage() {
   return (
     <main className="max-w-4xl mx-auto p-4">
       <header className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold">📊 สถิติสมัคร & เพื่อน Line OA</h1>
+        <h1 className="text-xl font-bold">📊 สถิติสมาชิก & Line OA</h1>
         <a href="/admin" className="text-sm text-emerald-600 hover:underline">← Admin</a>
       </header>
 
@@ -90,16 +90,16 @@ export default function RegistrationsPage() {
       </label>
 
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-4 text-xs text-amber-800">
-        ℹ️ <b>สมัคร</b> = จำนวนคลิกลิงก์สมัคร (ระบบภายนอกยืนยันสำเร็จไม่ได้) · <b>Line</b> = เพื่อนที่แอด OA จริง (เริ่มนับ ส.ค. 2568 เป็นต้นไป เดือนก่อนหน้าดูจาก LINE OA Manager)
+        ℹ️ <b>สมาชิก</b> = จำนวนสมาชิกจริงจากส่วนกลาง (อัปโหลดรายเดือน) · <b>Line OA</b> = จำนวนเพื่อนใน Line OA · เดือนที่ยังไม่อัปโหลด ระบบนับให้อัตโนมัติ
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-4">
         <div className="bg-blue-50 p-3 rounded-lg">
-          <div className="text-xs text-gray-600">📝 คลิกสมัคร</div>
+          <div className="text-xs text-gray-600">👥 สมาชิก</div>
           <div className="text-2xl font-bold text-blue-700">{totalReg.toLocaleString()}</div>
         </div>
         <div className="bg-green-50 p-3 rounded-lg">
-          <div className="text-xs text-gray-600">➕ เพื่อน Line จริง</div>
+          <div className="text-xs text-gray-600">➕ เพื่อน Line OA</div>
           <div className="text-2xl font-bold text-green-700">{totalLine.toLocaleString()}</div>
         </div>
         <div className="bg-emerald-50 p-3 rounded-lg">
@@ -117,8 +117,8 @@ export default function RegistrationsPage() {
               <tr>
                 <th className="p-3 text-left">รหัส</th>
                 <th className="p-3 text-left">ภาค</th>
-                <th className="p-3 text-right text-blue-700">คลิกสมัคร</th>
-                <th className="p-3 text-right text-green-700">เพื่อน Line</th>
+                <th className="p-3 text-right text-blue-700">สมาชิก</th>
+                <th className="p-3 text-right text-green-700">Line OA</th>
                 <th className="p-3 text-right">รวม</th>
               </tr>
             </thead>
