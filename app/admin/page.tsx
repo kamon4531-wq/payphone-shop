@@ -126,7 +126,7 @@ function Dashboard({ me }: { me: any }) {
         <div className="flex gap-3 items-center flex-wrap">
           <a href="/admin/chat" className="text-sm text-blue-600 hover:underline">💬 แชท</a>
           {canManageProducts && <a href="/admin/qr" className="text-sm text-blue-600 hover:underline">📱 QR</a>}
-          {canManageProducts && <a href="/admin/registrations" className="text-sm text-blue-600 hover:underline">📊 สถิติ</a>}
+          {(canManageProducts || me?.role === "region_manager") && <a href="/admin/registrations" className="text-sm text-blue-600 hover:underline">📊 สถิติ</a>}
           {isOwner && <a href="/admin/line-settings" className="text-sm text-blue-600 hover:underline">🔔 Line</a>}
           {isOwner && <a href="/admin/users" className="text-sm text-blue-600 hover:underline">👥 ผู้ใช้</a>}
           <a href="/" className="text-sm text-gray-600 hover:underline">← หน้าร้าน</a>
