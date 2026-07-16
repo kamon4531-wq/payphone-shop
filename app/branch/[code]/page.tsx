@@ -51,7 +51,7 @@ export default function BranchPage() {
           ➕ เพิ่มเพื่อน Line OA สาขา
         </a>
 
-        <a href="/" className="block w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg mb-3 shadow">
+        <a href={`https://payphone-web-live.vercel.app/?branch=${code}`} className="block w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg mb-3 shadow">
           🛒 ดูสินค้าราคาพิเศษ
         </a>
 
