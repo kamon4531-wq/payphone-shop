@@ -210,6 +210,10 @@ function ProductsTab() {
           </div>
           <input placeholder="ป้าย" value={editing.badge_text || ""} onChange={e => setEditing({ ...editing, badge_text: e.target.value })} className="w-full border p-2 rounded"/>
           <textarea placeholder="รายละเอียด" value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={5} className="w-full border p-2 rounded resize-y"/>
+          <label className="block border-2 border-dashed border-emerald-300 rounded-lg p-3 text-center text-sm text-emerald-700 cursor-pointer bg-emerald-50 hover:bg-emerald-100">
+            📸 เลือกหลายรูปพร้อมกัน — กดแล้วเลือกได้ถึง 3 รูปในครั้งเดียว (รูปแรก = รูปหลัก)
+            <input type="file" accept="image/*" multiple className="hidden" onChange={e => { const fs = Array.from(e.target.files || []).slice(0, 3); if (fs[0]) setFile1(fs[0]); if (fs[1]) setFile2(fs[1]); if (fs[2]) setFile3(fs[2]); e.target.value = ""; }}/>
+          </label>
           <div className="grid grid-cols-3 gap-2">
             <ImageSlot label="รูปหลัก *" current={editing.image_url} file={file1} setFile={setFile1} onClear={() => setEditing({ ...editing, image_url: "" })}/>
             <ImageSlot label="รูป 2" current={editing.image_url2} file={file2} setFile={setFile2} onClear={() => setEditing({ ...editing, image_url2: null })}/>
