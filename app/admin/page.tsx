@@ -161,13 +161,42 @@ function ProductsTab() {
   const filtered = useMemo(() => products.filter(p => (cat === "all" || p.category === cat) && (q === "" || p.name.toLowerCase().includes(q.toLowerCase()))), [products, cat, q]);
   const countByCat = useMemo(() => { const m: Record<string, number> = { all: products.length }; products.forEach(p => { m[p.category] = (m[p.category] || 0) + 1; }); return m; }, [products]);
 
-  async function uploadFile(f: File): Promise<{ url: string; id: string } | null> { const fd = new FormData(); fd.append("file", f); const up = await fetch("/api/upload", { method: "POST", body: fd }); if (!up.ok) return null; return await up.json(); }
+  async function compressImage(f: File): Promise<File> {
+    if (!/^image\/(jpeg|png|webp)$/i.test(f.type) || f.size < 500 * 1024) return f;
+    try {
+      const img = await createImageBitmap(f);
+      const max = 1500;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      const ctx = c.getContext("2d"); if (!ctx) return f;
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      const blob: Blob | null = await new Promise(res => c.toBlob(res, "image/jpeg", 0.85));
+      if (!blob || blob.size >= f.size) return f;
+      return new File([blob], (f.name.replace(/\.[^.]+$/, "") || "img") + ".jpg", { type: "image/jpeg" });
+    } catch { return f; }
+  }
+  async function uploadFile(f: File): Promise<{ url: string; id: string } | null> { const cf = await compressImage(f); const fd = new FormData(); fd.append("file", cf); const up = await fetch("/api/upload", { method: "POST", body: fd }); if (!up.ok) return null; return await up.json(); }
+  async function uploadWithRetry(f: File): Promise<{ url: string; id: string } | null> {
+    for (let i = 0; i < 4; i++) {
+      const r = await uploadFile(f);
+      if (r) return r;
+      await new Promise(res => setTimeout(res, 700 * (i + 1)));
+    }
+    return null;
+  }
   async function save(e: React.FormEvent) {
     e.preventDefault(); setBusy(true);
     let image_url = editing?.image_url || "", image_url2 = editing?.image_url2 || null, image_url3 = editing?.image_url3 || null, drive_file_id = editing?.drive_file_id || null;
-    if (file1) { const r = await uploadFile(file1); if (!r) { alert("up1 fail"); setBusy(false); return; } image_url = r.url; drive_file_id = r.id; }
-    if (file2) { const r = await uploadFile(file2); if (!r) { alert("up2 fail"); setBusy(false); return; } image_url2 = r.url; }
-    if (file3) { const r = await uploadFile(file3); if (!r) { alert("up3 fail"); setBusy(false); return; } image_url3 = r.url; }
+    const [r1, r2, r3] = await Promise.all([
+      file1 ? uploadWithRetry(file1) : Promise.resolve(null),
+      file2 ? uploadWithRetry(file2) : Promise.resolve(null),
+      file3 ? uploadWithRetry(file3) : Promise.resolve(null),
+    ]);
+    if (file1) { if (!r1) { alert("อัปรูปหลักไม่สำเร็จ กดบันทึกอีกครั้ง"); setBusy(false); return; } image_url = r1.url; drive_file_id = r1.id; }
+    if (file2) { if (!r2) { alert("อัปรูป 2 ไม่สำเร็จ กดบันทึกอีกครั้ง"); setBusy(false); return; } image_url2 = r2.url; }
+    if (file3) { if (!r3) { alert("อัปรูป 3 ไม่สำเร็จ กดบันทึกอีกครั้ง"); setBusy(false); return; } image_url3 = r3.url; }
     const r = await fetch("/api/products", { method: editing?.id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editing, image_url, image_url2, image_url3, drive_file_id }) });
     setBusy(false);
     if (r.ok) { setEditing(null); setFile1(null); setFile2(null); setFile3(null); load(); } else alert("บันทึกล้มเหลว");
