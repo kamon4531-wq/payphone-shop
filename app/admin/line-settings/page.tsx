@@ -182,4 +182,69 @@ export default function LineSettingsPage() {
           <div>
             <label className="text-sm font-semibold">Recipient User ID (ทางเลือก)</label>
             <input value={editing.recipient_id || ""}
-              onChange={e => setEditing({ ...editing, recipient_id:
+              onChange={e => setEditing({ ...editing, recipient_id: e.target.value })}
+              className="w-full border rounded-lg p-2 mt-1 font-mono text-xs"
+              placeholder="ถ้าไม่ใส่ = Broadcast ส่งให้ทุกคนที่เป็นเพื่อน"/>
+            <p className="text-xs text-gray-500 mt-1">User ID (U...) ของพนักงานคนเดียว หรือ Group ID (C...) ของกลุ่ม Line สาขา</p>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold">หมายเหตุ</label>
+            <input value={editing.notes || ""}
+              onChange={e => setEditing({ ...editing, notes: e.target.value })}
+              className="w-full border rounded-lg p-2 mt-1"
+              placeholder="เช่น 'admin: นาย A | group: พนักงานสาขา'"/>
+          </div>
+
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={editing.enabled}
+              onChange={e => setEditing({ ...editing, enabled: e.target.checked })}/>
+            <span className="text-sm">เปิดใช้งาน</span>
+          </label>
+
+          <div className="flex gap-2">
+            <button className="bg-emerald-500 text-white px-4 py-2 rounded font-semibold">บันทึก</button>
+            <button type="button" onClick={() => setEditing(null)} className="bg-gray-200 px-4 py-2 rounded">ยกเลิก</button>
+          </div>
+        </form>
+      )}
+
+      {loading ? (
+        <div className="text-center py-8 text-gray-500">กำลังโหลด...</div>
+      ) : (
+        <div className="space-y-2">
+          {settings.map(s => (
+            <div key={s.branch_code} className="bg-white p-3 rounded-xl shadow flex items-center gap-3 flex-wrap">
+              <div className="flex-1 min-w-[200px]">
+                <div className="font-bold">{s.branch_code}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Token: <span className="font-mono">{s.channel_access_token.slice(0, 12)}...{s.channel_access_token.slice(-8)}</span>
+                </div>
+                {s.recipient_id && (
+                  <div className="text-xs text-gray-500">
+                    Recipient: <span className="font-mono">{s.recipient_id}</span>
+                  </div>
+                )}
+                {s.notes && <div className="text-xs text-gray-400 italic">{s.notes}</div>}
+              </div>
+              <span className={`px-2 py-1 rounded text-xs font-semibold ${s.enabled ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                {s.enabled ? "✓ เปิด" : "ปิด"}
+              </span>
+              <button onClick={() => test(s.branch_code)} disabled={testing === s.branch_code}
+                className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-xs px-3 py-2 rounded font-semibold">
+                {testing === s.branch_code ? "กำลังส่ง..." : "🧪 ทดสอบ"}
+              </button>
+              <button onClick={() => setEditing(s)}
+                className="bg-gray-200 hover:bg-gray-300 text-xs px-3 py-2 rounded">แก้ไข</button>
+              <button onClick={() => del(s.branch_code)}
+                className="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-2 rounded">ลบ</button>
+            </div>
+          ))}
+          {settings.length === 0 && (
+            <div className="text-center py-12 text-gray-400">ยังไม่มีสาขาที่ตั้งค่า — กด "+ เพิ่มสาขา" เพื่อเริ่ม</div>
+          )}
+        </div>
+      )}
+    </main>
+  );
+}
