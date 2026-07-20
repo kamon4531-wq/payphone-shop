@@ -52,17 +52,22 @@ export async function GET(req: NextRequest) {
       ms.forEach((r: any) => { counts[r.branch_code] = { register: r.members || 0, line: r.line_friends || 0 }; });
       return NextResponse.json(mk(counts));
     }
-    // 2) ไม่มี manual -> นับอัตโนมัติจากคลิก/ผู้ติดตาม
+    // 2) ยังไม่อัปโหลด -> นับเฉพาะ "เพื่อน Line OA" อัตโนมัติจากผู้ติดตามจริง
+    //    ส่วน "สมาชิก" ปล่อยเป็น 0 เสมอ ห้ามเอายอดคลิกมาแสดงแทน (กันหยิบเลขผิดไปรายงาน)
     const [y, m] = month.split("-").map(Number);
     const since = new Date(Date.UTC(y, m - 1, 1, -7)).toISOString();
     const until = new Date(Date.UTC(y, m, 1, -7)).toISOString();
-    const [regRes, lineRes] = await Promise.all([
-      admin.from("register_clicks").select("branch_code").gte("clicked_at", since).lt("clicked_at", until),
-      admin.from("line_follows").select("branch_code").eq("event_type", "follow").gte("created_at", since).lt("created_at", until)
-    ]);
+    const { data: lineData } = await admin
+      .from("line_follows")
+      .select("branch_code")
+      .eq("event_type", "follow")
+      .gte("created_at", since)
+      .lt("created_at", until);
     const counts: Record<string, { register: number; line: number }> = {};
-    regRes.data?.forEach((r: any) => { if (!counts[r.branch_code]) counts[r.branch_code] = { register: 0, line: 0 }; counts[r.branch_code].register += 1; });
-    lineRes.data?.forEach((r: any) => { if (!counts[r.branch_code]) counts[r.branch_code] = { register: 0, line: 0 }; counts[r.branch_code].line += 1; });
+    lineData?.forEach((r: any) => {
+      if (!counts[r.branch_code]) counts[r.branch_code] = { register: 0, line: 0 };
+      counts[r.branch_code].line += 1;
+    });
     return NextResponse.json(mk(counts));
   }
 
