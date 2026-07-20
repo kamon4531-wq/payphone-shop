@@ -19,10 +19,12 @@ export async function GET(req: NextRequest) {
   let tag = "all";
 
   if (!month || month === "all") {
+    // รวมทุกเดือนจากข้อมูลจริงที่อัปโหลด
     const { data: ms } = await admin.from("monthly_stats").select("branch_code, members, line_friends");
     (ms || []).forEach((r: any) => add(r.branch_code, r.members || 0, r.line_friends || 0));
   } else if (/^\d{4}-\d{2}$/.test(month)) {
     tag = month;
+    // 1) มีข้อมูลอัปโหลดของเดือนนั้น -> ใช้ตัวเลขจริง
     const { data: ms } = await admin
       .from("monthly_stats")
       .select("branch_code, members, line_friends")
@@ -31,15 +33,18 @@ export async function GET(req: NextRequest) {
     if (ms && ms.length > 0) {
       ms.forEach((r: any) => add(r.branch_code, r.members || 0, r.line_friends || 0));
     } else {
+      // 2) ยังไม่อัปโหลด -> นับเฉพาะเพื่อน Line OA จากผู้ติดตามจริง
+      //    สมาชิกปล่อยเป็น 0 ห้ามเอายอดคลิกมาแทน (กันหยิบเลขผิดไปรายงาน)
       const [y, m] = month.split("-").map(Number);
       const since = new Date(Date.UTC(y, m - 1, 1, -7)).toISOString();
       const until = new Date(Date.UTC(y, m, 1, -7)).toISOString();
-      const [regRes, lineRes] = await Promise.all([
-        admin.from("register_clicks").select("branch_code").gte("clicked_at", since).lt("clicked_at", until),
-        admin.from("line_follows").select("branch_code").eq("event_type", "follow").gte("created_at", since).lt("created_at", until)
-      ]);
-      regRes.data?.forEach((r: any) => add(r.branch_code, 1, 0));
-      lineRes.data?.forEach((r: any) => add(r.branch_code, 0, 1));
+      const { data: lineData } = await admin
+        .from("line_follows")
+        .select("branch_code")
+        .eq("event_type", "follow")
+        .gte("created_at", since)
+        .lt("created_at", until);
+      lineData?.forEach((r: any) => add(r.branch_code, 0, 1));
     }
   }
 
