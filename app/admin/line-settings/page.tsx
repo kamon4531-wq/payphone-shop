@@ -11,6 +11,7 @@ type Setting = {
 };
 
 type HookResult = { ok: boolean; branch: string; error?: string };
+type BulkResult = { code: string; ok: boolean; msg: string };
 
 export default function LineSettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
@@ -19,6 +20,10 @@ export default function LineSettingsPage() {
   const [testing, setTesting] = useState<string | null>(null);
   const [hookBusy, setHookBusy] = useState(false);
   const [hookResults, setHookResults] = useState<HookResult[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResults, setBulkResults] = useState<BulkResult[]>([]);
 
   async function load() {
     setLoading(true);
@@ -69,6 +74,48 @@ export default function LineSettingsPage() {
     }
   }
 
+  const validBranches = new Set(BRANCHES.map(b => b.name.split(":")[0]));
+
+  // นำเข้าหลายสาขาทีเดียว: วางจาก Excel ได้เลย (จับรหัส Bxx + Token อัตโนมัติ)
+  async function importBulk() {
+    const lines = bulkText.split("\n").map(l => l.trim()).filter(Boolean);
+    const parsed: { code: string; token: string }[] = [];
+    for (const line of lines) {
+      const cells = line.split(/[\t,;|]+/).map(s => s.trim()).filter(Boolean);
+      const code = (cells.find(c => /^B\d+$/i.test(c)) || "").toUpperCase();
+      const token = cells.find(c => c.length >= 50) || "";
+      if (code && token && validBranches.has(code)) parsed.push({ code, token });
+    }
+    if (parsed.length === 0) { alert("ไม่พบข้อมูลที่ใช้ได้ (ต้องมีรหัสสาขา Bxx และ Token ยาวๆ ในบรรทัดเดียวกัน)"); return; }
+    if (!confirm(`นำเข้า ${parsed.length} สาขา?\n(สาขาที่มีอยู่แล้วจะถูกอัปเดตทับด้วยค่าใหม่)`)) return;
+    setBulkBusy(true);
+    setBulkResults([]);
+    const out: BulkResult[] = [];
+    for (const p of parsed) {
+      try {
+        const r = await fetch("/api/line-settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ branch_code: p.code, channel_access_token: p.token, enabled: true })
+        });
+        out.push(r.ok ? { code: p.code, ok: true, msg: "บันทึกสำเร็จ" } : { code: p.code, ok: false, msg: "บันทึกล้มเหลว " + r.status });
+      } catch (e: any) {
+        out.push({ code: p.code, ok: false, msg: e.message || "network error" });
+      }
+      setBulkResults([...out]);
+    }
+    setBulkBusy(false);
+    await load();
+  }
+
+  const configured = new Set(settings.map(s => s.branch_code));
+  const notConfigured = BRANCHES.filter(b => !configured.has(b.name.split(":")[0]));
+  const hookOk = hookResults.filter(r => r.ok).length;
+  const hookFail = hookResults.length - hookOk;
+  const sortedResults = [...hookResults].sort((a, b) => Number(a.ok) - Number(b.ok));
+  const bulkOk = bulkResults.filter(r => r.ok).length;
+  const bulkFail = bulkResults.length - bulkOk;
+
   // ตั้ง + เช็ค webhook ทีละสาขา (โชว์ความคืบหน้า กัน timeout)
   async function setupWebhooks() {
     if (settings.length === 0) { alert("ยังไม่มีสาขาที่ตั้งค่า Token"); return; }
@@ -94,12 +141,6 @@ export default function LineSettingsPage() {
     setHookBusy(false);
   }
 
-  const configured = new Set(settings.map(s => s.branch_code));
-  const notConfigured = BRANCHES.filter(b => !configured.has(b.name.split(":")[0]));
-  const hookOk = hookResults.filter(r => r.ok).length;
-  const hookFail = hookResults.length - hookOk;
-  const sortedResults = [...hookResults].sort((a, b) => Number(a.ok) - Number(b.ok));
-
   return (
     <main className="max-w-5xl mx-auto p-4">
       <header className="flex items-center justify-between mb-4">
@@ -116,6 +157,10 @@ export default function LineSettingsPage() {
           ตั้งค่าแล้ว: <b className="text-emerald-600">{settings.length}</b> / {BRANCHES.length} สาขา
         </div>
         <div className="flex gap-2 flex-wrap">
+          <button onClick={() => setBulkOpen(v => !v)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+            📥 นำเข้าหลายสาขา
+          </button>
           <button onClick={setupWebhooks} disabled={hookBusy}
             className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold">
             {hookBusy ? `กำลังตรวจ ${hookResults.length}/${settings.length}...` : "🔗 ตั้ง + เช็ค Webhook ทุกสาขา"}
@@ -126,6 +171,45 @@ export default function LineSettingsPage() {
           </button>
         </div>
       </div>
+
+      {bulkOpen && (
+        <div className="bg-white border-2 border-indigo-200 rounded-xl shadow p-4 mb-4">
+          <div className="font-semibold text-sm mb-1">📥 นำเข้าหลายสาขาทีเดียว</div>
+          <div className="text-xs text-gray-600 mb-2">
+            ก๊อปจาก Excel มาวางได้เลย (วางทั้งแถวก็ได้ ระบบจับ “รหัส Bxx” กับ “Token” ให้เอง) — 1 สาขาต่อ 1 บรรทัด
+          </div>
+          <textarea value={bulkText} onChange={e => setBulkText(e.target.value)} rows={8} disabled={bulkBusy}
+            className="w-full border rounded-lg p-2 font-mono text-xs"
+            placeholder={"ตัวอย่าง (วางจาก Excel):\nB02\tPA เซ็นทรัล ขอนแก่น\t0K/tgS3meg...(Token ยาว)...=\nB07\tPA สุรินทร์\t8VwEqbcu16...(Token ยาว)...="}/>
+          <div className="flex gap-2 mt-2 items-center flex-wrap">
+            <button onClick={importBulk} disabled={bulkBusy || !bulkText.trim()}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+              {bulkBusy ? `กำลังนำเข้า ${bulkResults.length}...` : "▶ เริ่มนำเข้า"}
+            </button>
+            <span className="text-xs text-gray-500">Token เป็นความลับ — วางในเครื่องคุณเท่านั้น อย่าแชร์</span>
+          </div>
+          {bulkResults.length > 0 && (
+            <div className="mt-3 border-t pt-2">
+              <div className="text-sm font-semibold mb-1">
+                นำเข้า — ✅ สำเร็จ <span className="text-emerald-600">{bulkOk}</span> · ❌ ไม่สำเร็จ <span className="text-red-600">{bulkFail}</span>
+              </div>
+              <div className="max-h-52 overflow-y-auto space-y-1">
+                {bulkResults.map(r => (
+                  <div key={r.code} className={`text-xs flex gap-2 ${r.ok ? "text-emerald-700" : "text-red-600"}`}>
+                    <span className="font-mono font-bold w-14 shrink-0">{r.code}</span>
+                    <span>{r.ok ? "✅ " : "❌ "}{r.msg}</span>
+                  </div>
+                ))}
+              </div>
+              {bulkFail === 0 && !bulkBusy && (
+                <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-2 mt-2">
+                  ✅ นำเข้าครบแล้ว — ต่อไปกดปุ่มม่วง “ตั้ง + เช็ค Webhook ทุกสาขา” เพื่อเปิดการนับเพื่อน
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {hookResults.length > 0 && (
         <div className="bg-white border rounded-xl shadow p-3 mb-4">
