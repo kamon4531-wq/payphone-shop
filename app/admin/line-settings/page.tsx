@@ -12,6 +12,7 @@ type Setting = {
 
 type HookResult = { ok: boolean; branch: string; error?: string };
 type BulkResult = { code: string; ok: boolean; msg: string };
+type CheckResult = { branch: string; ok: boolean; active: boolean; urlMatch: boolean; note: string };
 
 export default function LineSettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
@@ -24,6 +25,8 @@ export default function LineSettingsPage() {
   const [bulkText, setBulkText] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResults, setBulkResults] = useState<BulkResult[]>([]);
+  const [checkBusy, setCheckBusy] = useState(false);
+  const [checkResults, setCheckResults] = useState<CheckResult[]>([]);
 
   async function load() {
     setLoading(true);
@@ -141,6 +144,34 @@ export default function LineSettingsPage() {
     setHookBusy(false);
   }
 
+  // เช็กสถานะ webhook จริงจาก LINE (URL ตรง + Use webhook เปิด) ทีละสาขา
+  async function checkWebhooks() {
+    if (settings.length === 0) { alert("ยังไม่มีสาขาที่ตั้งค่า Token"); return; }
+    setCheckBusy(true);
+    setCheckResults([]);
+    const out: CheckResult[] = [];
+    for (const s of settings) {
+      try {
+        const r = await fetch("/api/line-settings/check-webhook", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ branch: s.branch_code })
+        });
+        const d = await r.json();
+        const one = (d.results && d.results[0]) || { branch: s.branch_code, ok: false, active: false, urlMatch: false, note: d.error || "unknown" };
+        out.push(one);
+      } catch (e: any) {
+        out.push({ branch: s.branch_code, ok: false, active: false, urlMatch: false, note: e.message || "network error" });
+      }
+      setCheckResults([...out]);
+    }
+    setCheckBusy(false);
+  }
+
+  const checkOk = checkResults.filter(r => r.ok).length;
+  const checkFail = checkResults.length - checkOk;
+  const sortedCheck = [...checkResults].sort((a, b) => Number(a.ok) - Number(b.ok));
+
   return (
     <main className="max-w-5xl mx-auto p-4">
       <header className="flex items-center justify-between mb-4">
@@ -164,6 +195,10 @@ export default function LineSettingsPage() {
           <button onClick={setupWebhooks} disabled={hookBusy}
             className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold">
             {hookBusy ? `กำลังตรวจ ${hookResults.length}/${settings.length}...` : "🔗 ตั้ง + เช็ค Webhook ทุกสาขา"}
+          </button>
+          <button onClick={checkWebhooks} disabled={checkBusy}
+            className="bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+            {checkBusy ? `กำลังเช็ก ${checkResults.length}/${settings.length}...` : "🔎 เช็กสถานะจริง"}
           </button>
           <button onClick={() => setEditing({ branch_code: "", channel_access_token: "", recipient_id: "", enabled: true, notes: "" })}
             className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-semibold">
@@ -227,6 +262,28 @@ export default function LineSettingsPage() {
               <div key={r.branch} className={`text-xs flex gap-2 items-start ${r.ok ? "text-emerald-700" : "text-red-600"}`}>
                 <span className="font-mono font-bold w-14 shrink-0">{r.branch}</span>
                 <span className="break-all">{r.ok ? "✅ เชื่อมต่อสำเร็จ" : `❌ ${r.error || "ไม่สำเร็จ"}`}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {checkResults.length > 0 && (
+        <div className="bg-white border-2 border-teal-200 rounded-xl shadow p-3 mb-4">
+          <div className="font-semibold text-sm mb-2">
+            🔎 สถานะจริงจาก LINE — ✅ พร้อมนับ <span className="text-emerald-600">{checkOk}</span> · ❌ ยังไม่พร้อม <span className="text-red-600">{checkFail}</span>
+            <span className="text-gray-500 font-normal"> (เช็กแล้ว {checkResults.length}/{settings.length} สาขา)</span>
+          </div>
+          {checkFail > 0 && (
+            <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mb-2">
+              ⚠️ สาขาที่ ❌ = LINE ยังไม่ส่งข้อมูลคนแอดมาให้ (มักเพราะ "Use webhook = ปิด") → ต้องเปิดสวิตช์ Webhook ที่สาขานั้น
+            </div>
+          )}
+          <div className="max-h-72 overflow-y-auto space-y-1">
+            {sortedCheck.map(r => (
+              <div key={r.branch} className={`text-xs flex gap-2 items-start ${r.ok ? "text-emerald-700" : "text-red-600"}`}>
+                <span className="font-mono font-bold w-14 shrink-0">{r.branch}</span>
+                <span className="break-all">{r.ok ? "✅ " : "❌ "}{r.note}</span>
               </div>
             ))}
           </div>
