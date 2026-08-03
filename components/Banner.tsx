@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 
-const SLIDES = ["/banner1.png", "/banner2.png", "/banner3.png"];
+const SLIDES = ["/banner4.png", "/banner1.png", "/banner2.png", "/banner3.png"];
 
 export default function Banner() {
   const [i, setI] = useState(0);
