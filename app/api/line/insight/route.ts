@@ -2,67 +2,66 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isAdmin } from "@/lib/auth";
 
-export async function GET(req: NextRequest) {
-  if (!isAdmin(req)) return NextResponse.json({ error: "no" }, { status: 401 });
+export const maxDuration = 60;
 
+function ymd(d: Date) {
+  const b = new Date(d.getTime() + 7 * 3600 * 1000);
+  return `${b.getUTCFullYear()}${String(b.getUTCMonth() + 1).padStart(2, "0")}${String(b.getUTCDate()).padStart(2, "0")}`;
+}
+function curYm() {
+  const b = new Date(Date.now() + 7 * 3600 * 1000);
+  return `${b.getUTCFullYear()}-${String(b.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+async function followersOn(token: string, dateYmd: string): Promise<number | null> {
+  try {
+    const r = await fetch(`https://api.line.me/v2/bot/insight/followers?date=${dateYmd}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (d.status !== "ready") return null;
+    return typeof d.followers === "number" ? d.followers : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function POST(req: NextRequest) {
+  if (!isAdmin(req)) return NextResponse.json({ error: "no" }, { status: 401 });
   const admin: any = supabaseAdmin();
 
-  if (req.nextUrl.searchParams.get("list") === "months") {
-    const { data } = await admin.from("monthly_stats").select("ym");
-    const set = new Set<string>((data || []).map((r: any) => r.ym));
-    const now = new Date();
-    set.add(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
-    const months = Array.from(set).sort().reverse();
-    return NextResponse.json({ months });
-  }
+  const { data: branches } = await admin
+    .from("branch_line_settings")
+    .select("branch_code, channel_access_token");
 
-  if (req.nextUrl.searchParams.get("matrix") === "1") {
-    const { data } = await admin.from("monthly_stats").select("branch_code, ym, members, line_friends, line_total");
-    const months = Array.from(new Set((data || []).map((r: any) => r.ym))).sort();
-    return NextResponse.json({ rows: data || [], months });
-  }
+  const ym = curYm();
+  const now = Date.now();
+  const y1 = new Date(now - 1 * 86400000);
+  const y2 = new Date(now - 2 * 86400000);
+  const bkk = new Date(now + 7 * 3600 * 1000);
+  const prevMonthEnd = new Date(Date.UTC(bkk.getUTCFullYear(), bkk.getUTCMonth(), 0));
 
-  const month = req.nextUrl.searchParams.get("month");
+  // เรียกทุกสาขาพร้อมกัน (ขนาน) กันหมดเวลา
+  const results = await Promise.all((branches || []).map(async (b: any) => {
+    if (!b.channel_access_token) return { branch: b.branch_code, skip: "no token", total: null };
+    let total = await followersOn(b.channel_access_token, ymd(y1));
+    if (total == null) total = await followersOn(b.channel_access_token, ymd(y2));
+    if (total == null) return { branch: b.branch_code, skip: "no data", total: null };
 
-  const mk = (counts: Record<string, { register: number; line: number; total: number | null }>) =>
-    Object.entries(counts)
-      .map(([branch_code, c]) => ({ branch_code, register: c.register, line: c.line, total: c.total, count: c.register + c.line }))
-      .sort((a, b) => b.count - a.count);
+    const prev = await followersOn(b.channel_access_token, ymd(prevMonthEnd));
+    const monthNew = prev != null ? Math.max(0, total - prev) : null;
 
-  if (month === "all" || !month) {
-    const { data: ms } = await admin.from("monthly_stats").select("branch_code, members, line_friends");
-    const counts: Record<string, { register: number; line: number; total: number | null }> = {};
-    (ms || []).forEach((r: any) => {
-      if (!counts[r.branch_code]) counts[r.branch_code] = { register: 0, line: 0, total: null };
-      counts[r.branch_code].register += r.members || 0;
-      counts[r.branch_code].line += r.line_friends || 0;
-    });
-    return NextResponse.json(mk(counts));
-  }
+    await admin.from("monthly_stats").upsert(
+      { branch_code: b.branch_code, ym, line_total: total, ...(monthNew != null ? { line_friends: monthNew } : {}) },
+      { onConflict: "branch_code,ym" }
+    );
+    return { branch: b.branch_code, total, monthNew };
+  }));
 
-  if (/^\d{4}-\d{2}$/.test(month)) {
-    const { data: ms } = await admin.from("monthly_stats").select("branch_code, members, line_friends, line_total").eq("ym", month);
-    if (ms && ms.length > 0) {
-      const counts: Record<string, { register: number; line: number; total: number | null }> = {};
-      ms.forEach((r: any) => { counts[r.branch_code] = { register: r.members || 0, line: r.line_friends || 0, total: r.line_total ?? null }; });
-      return NextResponse.json(mk(counts));
-    }
-    const [y, m] = month.split("-").map(Number);
-    const since = new Date(Date.UTC(y, m - 1, 1, -7)).toISOString();
-    const until = new Date(Date.UTC(y, m, 1, -7)).toISOString();
-    const { data: lineData } = await admin
-      .from("line_follows")
-      .select("branch_code")
-      .eq("event_type", "follow")
-      .gte("created_at", since)
-      .lt("created_at", until);
-    const counts: Record<string, { register: number; line: number; total: number | null }> = {};
-    lineData?.forEach((r: any) => {
-      if (!counts[r.branch_code]) counts[r.branch_code] = { register: 0, line: 0, total: null };
-      counts[r.branch_code].line += 1;
-    });
-    return NextResponse.json(mk(counts));
-  }
+  return NextResponse.json({ ok: true, ym, updated: results.filter((r: any) => r.total != null).length, results });
+}
 
-  return NextResponse.json([]);
+export function GET() {
+  return NextResponse.json({ ok: true, info: "POST เพื่อดึงยอด Line OA จาก LINE Insight" });
 }
