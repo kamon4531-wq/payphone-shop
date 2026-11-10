@@ -22,6 +22,8 @@ export async function POST(req: NextRequest) {
     image_url: body.image_url,
     image_url2: body.image_url2 || null,
     image_url3: body.image_url3 || null,
+    image_url4: body.image_url4 || null,
+    image_url5: body.image_url5 || null,
     drive_file_id: body.drive_file_id
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -39,6 +41,8 @@ export async function PUT(req: NextRequest) {
     image_url: body.image_url,
     image_url2: body.image_url2 || null,
     image_url3: body.image_url3 || null,
+    image_url4: body.image_url4 || null,
+    image_url5: body.image_url5 || null,
     drive_file_id: body.drive_file_id
   }).eq("id", body.id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
