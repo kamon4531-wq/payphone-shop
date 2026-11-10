@@ -151,6 +151,8 @@ function ProductsTab() {
   const [file1, setFile1] = useState<File | null>(null);
   const [file2, setFile2] = useState<File | null>(null);
   const [file3, setFile3] = useState<File | null>(null);
+  const [file4, setFile4] = useState<File | null>(null);
+  const [file5, setFile5] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [cat, setCat] = useState("all");
   const [q, setQ] = useState("");
@@ -188,18 +190,22 @@ function ProductsTab() {
   }
   async function save(e: React.FormEvent) {
     e.preventDefault(); setBusy(true);
-    let image_url = editing?.image_url || "", image_url2 = editing?.image_url2 || null, image_url3 = editing?.image_url3 || null, drive_file_id = editing?.drive_file_id || null;
-    const [r1, r2, r3] = await Promise.all([
+    let image_url = editing?.image_url || "", image_url2 = editing?.image_url2 || null, image_url3 = editing?.image_url3 || null, image_url4 = editing?.image_url4 || null, image_url5 = editing?.image_url5 || null, drive_file_id = editing?.drive_file_id || null;
+    const [r1, r2, r3, r4, r5] = await Promise.all([
       file1 ? uploadWithRetry(file1) : Promise.resolve(null),
       file2 ? uploadWithRetry(file2) : Promise.resolve(null),
       file3 ? uploadWithRetry(file3) : Promise.resolve(null),
+      file4 ? uploadWithRetry(file4) : Promise.resolve(null),
+      file5 ? uploadWithRetry(file5) : Promise.resolve(null),
     ]);
     if (file1) { if (!r1) { alert("อัปรูปหลักไม่สำเร็จ กดบันทึกอีกครั้ง"); setBusy(false); return; } image_url = r1.url; drive_file_id = r1.id; }
     if (file2) { if (!r2) { alert("อัปรูป 2 ไม่สำเร็จ กดบันทึกอีกครั้ง"); setBusy(false); return; } image_url2 = r2.url; }
     if (file3) { if (!r3) { alert("อัปรูป 3 ไม่สำเร็จ กดบันทึกอีกครั้ง"); setBusy(false); return; } image_url3 = r3.url; }
-    const r = await fetch("/api/products", { method: editing?.id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editing, image_url, image_url2, image_url3, drive_file_id }) });
+    if (file4) { if (!r4) { alert("อัปรูป 4 ไม่สำเร็จ กดบันทึกอีกครั้ง"); setBusy(false); return; } image_url4 = r4.url; }
+    if (file5) { if (!r5) { alert("อัปรูป 5 ไม่สำเร็จ กดบันทึกอีกครั้ง"); setBusy(false); return; } image_url5 = r5.url; }
+    const r = await fetch("/api/products", { method: editing?.id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...editing, image_url, image_url2, image_url3, image_url4, image_url5, drive_file_id }) });
     setBusy(false);
-    if (r.ok) { setEditing(null); setFile1(null); setFile2(null); setFile3(null); load(); } else alert("บันทึกล้มเหลว");
+    if (r.ok) { setEditing(null); setFile1(null); setFile2(null); setFile3(null); setFile4(null); setFile5(null); load(); } else alert("บันทึกล้มเหลว");
   }
   async function del(id: string) { if (!confirm("ลบสินค้านี้?")) return; await fetch(`/api/products?id=${id}`, { method: "DELETE" }); load(); }
 
@@ -240,17 +246,19 @@ function ProductsTab() {
           <input placeholder="ป้าย" value={editing.badge_text || ""} onChange={e => setEditing({ ...editing, badge_text: e.target.value })} className="w-full border p-2 rounded"/>
           <textarea placeholder="รายละเอียด" value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={5} className="w-full border p-2 rounded resize-y"/>
           <label className="block border-2 border-dashed border-emerald-300 rounded-lg p-3 text-center text-sm text-emerald-700 cursor-pointer bg-emerald-50 hover:bg-emerald-100">
-            📸 เลือกหลายรูปพร้อมกัน — กดแล้วเลือกได้ถึง 3 รูปในครั้งเดียว (รูปแรก = รูปหลัก)
-            <input type="file" accept="image/*" multiple className="hidden" onChange={e => { const fs = Array.from(e.target.files || []).slice(0, 3); if (fs[0]) setFile1(fs[0]); if (fs[1]) setFile2(fs[1]); if (fs[2]) setFile3(fs[2]); e.target.value = ""; }}/>
+            📸 เลือกหลายรูปพร้อมกัน — กดแล้วเลือกได้ถึง 5 รูปในครั้งเดียว (รูปแรก = รูปหลัก)
+            <input type="file" accept="image/*" multiple className="hidden" onChange={e => { const fs = Array.from(e.target.files || []).slice(0, 5); if (fs[0]) setFile1(fs[0]); if (fs[1]) setFile2(fs[1]); if (fs[2]) setFile3(fs[2]); if (fs[3]) setFile4(fs[3]); if (fs[4]) setFile5(fs[4]); e.target.value = ""; }}/>
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-5 gap-2">
             <ImageSlot label="รูปหลัก *" current={editing.image_url} file={file1} setFile={setFile1} onClear={() => setEditing({ ...editing, image_url: "" })}/>
             <ImageSlot label="รูป 2" current={editing.image_url2} file={file2} setFile={setFile2} onClear={() => setEditing({ ...editing, image_url2: null })}/>
             <ImageSlot label="รูป 3" current={editing.image_url3} file={file3} setFile={setFile3} onClear={() => setEditing({ ...editing, image_url3: null })}/>
+            <ImageSlot label="รูป 4" current={editing.image_url4} file={file4} setFile={setFile4} onClear={() => setEditing({ ...editing, image_url4: null })}/>
+            <ImageSlot label="รูป 5" current={editing.image_url5} file={file5} setFile={setFile5} onClear={() => setEditing({ ...editing, image_url5: null })}/>
           </div>
           <div className="flex gap-2">
             <button disabled={busy} className="bg-emerald-500 text-white px-4 py-2 rounded disabled:opacity-50">{busy ? "..." : "บันทึก"}</button>
-            <button type="button" onClick={() => { setEditing(null); setFile1(null); setFile2(null); setFile3(null); }} className="bg-gray-200 px-4 py-2 rounded">ยกเลิก</button>
+            <button type="button" onClick={() => { setEditing(null); setFile1(null); setFile2(null); setFile3(null); setFile4(null); setFile5(null); }} className="bg-gray-200 px-4 py-2 rounded">ยกเลิก</button>
           </div>
         </form>
       )}
