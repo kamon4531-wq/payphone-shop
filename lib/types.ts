@@ -8,6 +8,8 @@ export type Product = {
   image_url: string;
   image_url2: string | null;
   image_url3: string | null;
+  image_url4: string | null;
+  image_url5: string | null;
   badge_text: string | null;
   drive_file_id: string | null;
   created_at: string;
